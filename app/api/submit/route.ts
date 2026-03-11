@@ -40,10 +40,11 @@ export async function POST(request: Request) {
       message: "Данные сохранены",
       data,
     });
-  } catch (error: any) {
-    console.error("Submit error:", error);
+    } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Неизвестная ошибка";
+    console.error("Submit error:", message);
     return NextResponse.json(
-      { success: false, message: error.message },
+      { success: false, message: message },
       { status: 500 }
     );
   }

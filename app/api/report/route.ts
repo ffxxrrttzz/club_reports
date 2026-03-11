@@ -22,8 +22,9 @@ export async function GET() {
     }, {});
 
     return NextResponse.json({ raw: data || [], summary });
-  } catch (error: any) {
-    console.error("Report error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Неизвестная ошибка";
+    console.error("Report error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

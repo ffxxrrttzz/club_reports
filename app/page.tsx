@@ -142,7 +142,7 @@ export default function Home() {
     }
   };
 
-  const downloadExcel = () => {
+    const downloadExcel = () => {
     try {
       if (data.length === 0) {
         alert("⚠️ Нет данных за выбранный период!");
@@ -152,7 +152,7 @@ export default function Home() {
       const today = new Date().toLocaleDateString('ru-RU');
 
       // === ЛИСТ 1: Данные ===
-      const sheet1Data: any[][] = [];
+      const sheet1Data: (string | number)[][] = [];
 
       sheet1Data.push([
         "№ п/п",
@@ -230,7 +230,19 @@ export default function Home() {
       ]);
 
       // === ЛИСТ 2: Итоги по клубам ===
-      const sheet2Data: any[][] = [];
+      interface ClubStats {
+        club_name: string;
+        total_sections: number;
+        total_rate: number;
+        total_norm_people: number;
+        total_people: number;
+        total_families: number;
+        total_norm_mso: number;
+        total_mso: number;
+        notes: string;
+      }
+
+      const sheet2Data: (string | number)[][] = [];
 
       sheet2Data.push([
         "№ п/п",
@@ -248,7 +260,7 @@ export default function Home() {
       ]);
 
       let clubNum = 1;
-      summary.forEach((club) => {
+      summary.forEach((club: ClubStats) => {
         sheet2Data.push([
           clubNum++,
           club.club_name,
@@ -279,10 +291,6 @@ export default function Home() {
       setMessage("❌ Ошибка Excel: " + (err as Error).message);
     }
   };
-
-  if (!isClient) {
-    return <div style={{ padding: 20, textAlign: "center" }}>Загрузка...</div>;
-  }
 
   return (
     <div className="container">

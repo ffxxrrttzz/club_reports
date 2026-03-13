@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import type { Report } from "@/types/database";
-import { utils, writeFile } from "xlsx";
+import { utils } from "xlsx";
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const today = new Date().toLocaleDateString('ru-RU');
 
     // === ЛИСТ 1: Данные ===
-    const sheet1Data: any[][] = [];
+    const sheet1Data: (string | number)[][] = [];
 
     // Заголовки (строки 1-2)
     sheet1Data.push([
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // === ЛИСТ 2: Итоги по клубам ===
-    const clubMap = new Map<string, {
+    interface ClubStats {
       total_sections: number;
       total_rate: number;
       total_norm_people: number;
@@ -118,7 +118,9 @@ export async function GET(request: NextRequest) {
       total_norm_mso: number;
       total_mso: number;
       notes: string;
-    }>();
+    }
+
+    const clubMap = new Map<string, ClubStats>();
 
     data.forEach((row: Report) => {
       if (!clubMap.has(row.club_name)) {
@@ -147,7 +149,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    const sheet2Data: any[][] = [];
+    const sheet2Data: (string | number)[][] = [];
 
     // Заголовки
     sheet2Data.push([
@@ -193,8 +195,8 @@ export async function GET(request: NextRequest) {
     const ws2 = utils.aoa_to_sheet(sheet2Data);
     utils.book_append_sheet(wb, ws2, "Итоги по клубам");
 
-    // Генерируем файл на клиенте (отправляем данные)
-    const buffer = utils.sheet_to_json(wb, { header: 1 });
+    // Генерируем буфер для отправки (опционально)
+    // В текущей реализации экспорт происходит на клиенте через page.tsx
 
     return NextResponse.json({
       success: true,

@@ -79,5 +79,4 @@ export interface FormData {
   mso_age_14_17: string;
   mso_age_18_35: string;
   notes: string;
-  password: string;
 }

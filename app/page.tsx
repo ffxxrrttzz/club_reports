@@ -8,6 +8,13 @@ import { logout } from "@/lib/auth";
 import type { Report, ClubSummary, FormData, Direction } from "@/types/database";
 import { RATES, PERIODS } from "@/types/database";
 
+function getDefaultPeriod(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
 export default function Home() {
   const router = useRouter();
 
@@ -24,7 +31,7 @@ export default function Home() {
     direction: "",
     section_name: "",
     supervisor_name: "",
-    period: PERIODS[new Date().getMonth()],
+    period: getDefaultPeriod(),
     rate: "1",
     norm_capacity_people: "",
     actual_age_14_17: "",
@@ -35,10 +42,11 @@ export default function Home() {
     mso_age_14_17: "",
     mso_age_18_35: "",
     notes: "",
-    password: "",
   });
 
-  const [selectedPeriod, setSelectedPeriod] = useState<string>(PERIODS[new Date().getMonth()]);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>(getDefaultPeriod());
+  const [availablePeriods, setAvailablePeriods] = useState<string[]>(PERIODS);
+  const [periodInputValue, setPeriodInputValue] = useState<string>("");
   const [data, setData] = useState<Report[]>([]);
   const [summary, setSummary] = useState<ClubSummary[]>([]);
   const [loading, setLoading] = useState(false);
@@ -211,6 +219,10 @@ export default function Home() {
         setMessage("✅ Отправлено!");
         setFormData(prev => ({
           ...prev,
+          club_name: "",
+          direction: "",
+          section_name: "",
+          supervisor_name: "",
           rate: "1",
           norm_capacity_people: "",
           actual_age_14_17: "",
@@ -445,15 +457,42 @@ export default function Home() {
       {/* Выбор периода */}
       <div className="period-selector">
         <label>Выберите период для отчёта:</label>
-        <select
-          value={selectedPeriod}
-          onChange={(e) => setSelectedPeriod(e.target.value)}
-          className="input"
-        >
-          {PERIODS.map(period => (
-            <option key={period} value={period}>{period}</option>
-          ))}
-        </select>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <select
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            className="input"
+            style={{ flex: 1 }}
+          >
+            {availablePeriods.map(period => (
+              <option key={period} value={period}>{period}</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            placeholder="YYYY-MM"
+            value={periodInputValue}
+            onChange={(e) => setPeriodInputValue(e.target.value)}
+            className="input"
+            style={{ width: '120px' }}
+            pattern="\d{4}-\d{2}"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const regex = /^\d{4}-\d{2}$/;
+              if (regex.test(periodInputValue) && !availablePeriods.includes(periodInputValue)) {
+                setAvailablePeriods([...availablePeriods, periodInputValue].sort());
+                setSelectedPeriod(periodInputValue);
+                setPeriodInputValue("");
+              }
+            }}
+            className="btn"
+            style={{ padding: '8px 16px', minWidth: '80px' }}
+          >
+            +
+          </button>
+        </div>
       </div>
 
       {/* Форма */}
@@ -495,23 +534,57 @@ export default function Home() {
                 type="text"
                 placeholder="ФИО руководителя"
                 value={formData.supervisor_name}
+                onChange={(e) => setFormData({ ...formData, supervisor_name: e.target.value })}
                 className="input"
                 required
-                readOnly
-                style={{ backgroundColor: '#f5f5f5' }}
               />
 
-              <select
-                value={formData.period}
-                onChange={(e) => setFormData({ ...formData, period: e.target.value })}
-                className="input"
-                required
-              >
-                <option value="">Выберите период</option>
-                {PERIODS.map(period => (
-                  <option key={period} value={period}>{period}</option>
-                ))}
-              </select>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <select
+                  value={formData.period}
+                  onChange={(e) => {
+                    setFormData({ ...formData, period: e.target.value });
+                    setPeriodInputValue("");
+                  }}
+                  className="input"
+                  style={{ flex: 1 }}
+                  required
+                >
+                  <option value="">Выберите период</option>
+                  {availablePeriods.map(period => (
+                    <option key={period} value={period}>{period}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ fontSize: '12px', color: '#666', marginTop: '-8px' }}>
+                Или введите новый период (YYYY-MM):
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  placeholder="Например: 2025-01"
+                  value={periodInputValue}
+                  onChange={(e) => setPeriodInputValue(e.target.value)}
+                  className="input"
+                  style={{ flex: 1 }}
+                  pattern="\d{4}-\d{2}"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const regex = /^\d{4}-\d{2}$/;
+                    if (regex.test(periodInputValue) && !availablePeriods.includes(periodInputValue)) {
+                      setAvailablePeriods([...availablePeriods, periodInputValue].sort());
+                      setFormData({ ...formData, period: periodInputValue });
+                      setPeriodInputValue("");
+                    }
+                  }}
+                  className="btn"
+                  style={{ padding: '8px 16px', minWidth: '100px' }}
+                >
+                  Добавить
+                </button>
+              </div>
 
               <select
                 value={formData.rate}
@@ -620,15 +693,6 @@ export default function Home() {
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 className="input textarea"
                 rows={3}
-              />
-
-              <input
-                type="password"
-                placeholder="Пароль (club2024)"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="input"
-                required
               />
 
               <button type="submit" disabled={loading} className={loading ? "btn-disabled" : "btn"}>

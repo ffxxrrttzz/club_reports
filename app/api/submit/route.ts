@@ -22,16 +22,7 @@ export async function POST(request: NextRequest) {
       mso_age_14_17,
       mso_age_18_35,
       notes,
-      password,
     } = body;
-
-    // Проверка пароля
-    if (password !== "club2024") {
-      return NextResponse.json(
-        { success: false, message: "Неверный пароль" },
-        { status: 401 }
-      );
-    }
 
     // Валидация направления
     const validDirections: Direction[] = ['КДН', 'ДПИ', 'Спортивное', 'Социальное', 'Патриотическое'];
@@ -86,7 +77,7 @@ export async function POST(request: NextRequest) {
         mso_age_18_35: Number(mso_age_18_35) || 0,
         mso_total,
         notes: notes || '',
-        password,
+        password: '',
       })
       .select();
 

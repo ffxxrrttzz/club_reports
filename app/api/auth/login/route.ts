@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
 
     // Set session cookie
     response.cookies.set("session", sessionData, {
-      httpOnly: false,
+      httpOnly: true,
       secure: false,
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7, // 7 days

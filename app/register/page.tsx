@@ -10,28 +10,9 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [clubId, setClubId] = useState("");
-  const [clubs, setClubs] = useState<{ id: number; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    loadClubs();
-  }, []);
-
-  const loadClubs = async () => {
-    try {
-      const res = await fetch("/api/combo-options?type=clubs");
-      if (res.ok) {
-        const data = await res.json();
-        // Format clubs for select (assuming API returns just names)
-        // We need to fetch actual clubs with IDs from database
-        // For now, let's mock it or create a separate endpoint
-      }
-    } catch (err) {
-      console.error("Error loading clubs:", err);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +44,6 @@ export default function RegisterPage() {
           email,
           password,
           fullName,
-          clubId: clubId || null,
         }),
       });
 
@@ -111,17 +91,6 @@ export default function RegisterPage() {
             className="input"
             required
           />
-
-          <select
-            value={clubId}
-            onChange={(e) => setClubId(e.target.value)}
-            className="input"
-          >
-            <option value="">Выберите клуб (опционально)</option>
-            {clubs.map((club) => (
-              <option key={club.id} value={club.id}>{club.name}</option>
-            ))}
-          </select>
 
           <input
             type="password"

@@ -9,7 +9,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, password, fullName, clubId } = body;
+    const { email, password, fullName } = body;
 
     // Validation
     if (!email || !password || !fullName) {
@@ -55,7 +55,6 @@ export async function POST(req: NextRequest) {
           email,
           password_hash: fullPasswordHash,
           full_name: fullName,
-          club_id: clubId || null,
           role: "manager",
         },
       ])

@@ -28,7 +28,7 @@ export default function LoginPage() {
       if (res.ok) {
         setMessage("✅ Вход выполнен успешно!");
         setTimeout(() => {
-          router.push("/");
+          router.push("/?reload=" + Date.now());
         }, 500);
       } else {
         setMessage("❌ " + json.error);
@@ -55,6 +55,7 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             className="input"
             required
+            autoComplete="off"
           />
 
           <input
@@ -64,6 +65,7 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="input"
             required
+            autoComplete="off"
           />
 
           <button type="submit" disabled={loading} className={loading ? "btn-disabled" : "btn"}>

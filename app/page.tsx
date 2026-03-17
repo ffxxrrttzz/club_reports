@@ -369,7 +369,7 @@ export default function Home() {
 
       const wb = utils.book_new();
       const ws1 = utils.aoa_to_sheet(sheet1Data);
-      
+
       // Установка ширины колонок для лучшей читаемости
       ws1['!cols'] = [
         { wch: 8 },  // № п/п
@@ -386,6 +386,22 @@ export default function Home() {
         { wch: 20 }, // Примечание
       ];
 
+      // Применяем стиль к заголовкам (первые 2 строки)
+      const headerStyle = {
+        font: { bold: true },
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+      };
+
+      // Стилизуем первую и вторую строку (заголовки)
+      for (let col = 0; col < sheet1Data[0].length; col++) {
+        const cell1 = utils.encode_cell({ r: 0, c: col });
+        const cell2 = utils.encode_cell({ r: 1, c: col });
+        if (!ws1[cell1]) ws1[cell1] = { v: '', t: 's' };
+        if (!ws1[cell2]) ws1[cell2] = { v: '', t: 's' };
+        ws1[cell1].s = headerStyle;
+        ws1[cell2].s = headerStyle;
+      }
+
       utils.book_append_sheet(wb, ws1, "Данные");
 
       const ws2 = utils.aoa_to_sheet(sheet2Data);
@@ -401,6 +417,13 @@ export default function Home() {
         { wch: 12 }, // МСО факт
         { wch: 20 }, // Примечание
       ];
+
+      // Применяем стиль к заголовку второго листа
+      for (let col = 0; col < sheet2Data[0].length; col++) {
+        const cell = utils.encode_cell({ r: 0, c: col });
+        if (!ws2[cell]) ws2[cell] = { v: '', t: 's' };
+        ws2[cell].s = headerStyle;
+      }
 
       utils.book_append_sheet(wb, ws2, "Итоги по клубам");
 

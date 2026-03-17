@@ -475,11 +475,11 @@ export default function Home() {
   };
 
   if (!isClient) {
-    return <div className="container"><h1 className="title">⏳ Загрузка...</h1></div>;
+    return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>⏳ Загрузка...</div>;
   }
 
   return (
-    <div className="container">
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", padding: "20px", paddingBottom: "40px" }}>
       {/* User header */}
       <div style={{
         display: "flex",

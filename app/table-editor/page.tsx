@@ -97,6 +97,26 @@ export default function TableEditorPage() {
     <div className="table-editor-container" suppressHydrationWarning>
       <div className="table-editor-card">
         <div className="table-editor-header">
+          <div style={{ display: "flex", alignItems: "center", gap: "15px", marginBottom: "15px" }}>
+            <button
+              onClick={() => router.push("/")}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#f0f0f0",
+                color: "#333",
+                border: "1px solid #ddd",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: "500",
+                transition: "background-color 0.3s",
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#e0e0e0")}
+              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#f0f0f0")}
+            >
+              ← Вернуться
+            </button>
+          </div>
           <h1>📊 Редактор таблицы данных</h1>
           <p className="table-editor-subtitle">Сортировка и просмотр всех записей</p>
         </div>

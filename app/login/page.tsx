@@ -42,7 +42,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="auth-container">
+    <div className="auth-container" suppressHydrationWarning>
       <div className="auth-card">
         <h1>🔐 Вход</h1>
         <p className="auth-subtitle">Система отчетности детских кружков</p>
@@ -56,6 +56,7 @@ export default function LoginPage() {
             className="input"
             required
             autoComplete="off"
+            suppressHydrationWarning
           />
 
           <input
@@ -66,6 +67,7 @@ export default function LoginPage() {
             className="input"
             required
             autoComplete="off"
+            suppressHydrationWarning
           />
 
           <button type="submit" disabled={loading} className={loading ? "btn-disabled" : "btn"}>

@@ -1,39 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { utils, writeFile } from "xlsx";
+import ComboBox from "@/components/ComboBox";
+import { logout } from "@/lib/auth";
 import type { Report, ClubSummary, FormData, Direction } from "@/types/database";
-import { DIRECTIONS, RATES, PERIODS } from "@/types/database";
-
-const CLUBS = ["Клуб А", "Клуб Б", "Клуб В"];
-
-const SECTIONS: Record<Direction, { name: string; supervisor: string }[]> = {
-  'КДН': [
-    { name: "Шахматы", supervisor: "Иванов Иван Иванович" },
-    { name: "Рисование", supervisor: "Петрова Анна Сергеевна" },
-    { name: "Музыка", supervisor: "Сидоров Пётр Николаевич" },
-  ],
-  'ДПИ': [
-    { name: "Керамика", supervisor: "Сидорова Мария Петровна" },
-    { name: "Вышивка", supervisor: "Козлов Дмитрий Андреевич" },
-    { name: "Лепка", supervisor: "Волкова Елена Сергеевна" },
-  ],
-  'Спортивное': [
-    { name: "Футбол", supervisor: "Смирнов Алексей Владимирович" },
-    { name: "Баскетбол", supervisor: "Волкова Елена Сергеевна" },
-    { name: "Плавание", supervisor: "Николаев Игорь Петрович" },
-  ],
-  'Социальное': [
-    { name: "Волонтёры", supervisor: "Николаева Ольга Петровна" },
-    { name: "Помощь пожилым", supervisor: "Александрова Татьяна Ивановна" },
-  ],
-  'Патриотическое': [
-    { name: "Юнармия", supervisor: "Петров Сергей Иванович" },
-    { name: "Поисковый отряд", supervisor: "Васильев Андрей Михайлович" },
-  ],
-};
+import { RATES, PERIODS } from "@/types/database";
 
 export default function Home() {
+  const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
     club_name: "",
     direction: "",
@@ -54,36 +30,101 @@ export default function Home() {
   });
 
   const [selectedPeriod, setSelectedPeriod] = useState<string>(PERIODS[new Date().getMonth()]);
-  const [availableSections, setAvailableSections] = useState<{ name: string; supervisor: string }[]>([]);
   const [data, setData] = useState<Report[]>([]);
   const [summary, setSummary] = useState<ClubSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [isClient, setIsClient] = useState(false);
 
+  // Combo box options
+  const [clubs, setClubs] = useState<string[]>([]);
+  const [directions, setDirections] = useState<string[]>([]);
+  const [sections, setSections] = useState<{ name: string; supervisor: string }[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
+
+  // User session
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [loggingOut, setLoggingOut] = useState(false);
+
   useEffect(() => {
     setIsClient(true);
+    // Extract email from session cookie
+    try {
+      const cookies = document.cookie.split(";");
+      const sessionCookie = cookies.find((c) => c.trim().startsWith("session="));
+      if (sessionCookie) {
+        const sessionData = sessionCookie.split("=")[1];
+        const decoded = JSON.parse(atob(decodeURIComponent(sessionData)));
+        setUserEmail(decoded.email || "");
+      }
+    } catch (err) {
+      console.error("Error reading session:", err);
+    }
   }, []);
 
+  // Load combo options on mount
+  useEffect(() => {
+    loadComboOptions();
+  }, []);
+
+  // Load report data when period changes
   useEffect(() => {
     loadData(selectedPeriod);
   }, [selectedPeriod]);
 
+  // Load sections when direction changes
   useEffect(() => {
-    if (formData.direction && formData.direction in SECTIONS) {
-      setAvailableSections(SECTIONS[formData.direction as Direction]);
+    if (formData.direction) {
+      loadSections(formData.direction);
       setFormData(prev => ({ ...prev, section_name: "", supervisor_name: "" }));
     }
   }, [formData.direction]);
 
+  // Auto-fill supervisor when section changes
   useEffect(() => {
-    if (formData.section_name && availableSections.length > 0) {
-      const section = availableSections.find(s => s.name === formData.section_name);
+    if (formData.section_name && sections.length > 0) {
+      const section = sections.find(s => s.name === formData.section_name);
       if (section) {
         setFormData(prev => ({ ...prev, supervisor_name: section.supervisor }));
       }
     }
-  }, [formData.section_name, availableSections]);
+  }, [formData.section_name, sections]);
+
+  const loadComboOptions = async () => {
+    try {
+      setLoadingOptions(true);
+      const [clubRes, dirRes] = await Promise.all([
+        fetch("/api/combo-options?type=clubs"),
+        fetch("/api/combo-options?type=directions"),
+      ]);
+
+      if (clubRes.ok) {
+        const clubData = await clubRes.json();
+        setClubs(clubData.options || []);
+      }
+
+      if (dirRes.ok) {
+        const dirData = await dirRes.json();
+        setDirections(dirData.options || []);
+      }
+    } catch (err) {
+      console.error("Error loading combo options:", err);
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
+
+  const loadSections = async (direction: string) => {
+    try {
+      const res = await fetch(`/api/combo-options?type=sections&direction=${encodeURIComponent(direction)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSections(data.options || []);
+      }
+    } catch (err) {
+      console.error("Error loading sections:", err);
+    }
+  };
 
   const loadData = async (period: string) => {
     try {
@@ -98,6 +139,76 @@ export default function Home() {
     } catch (err) {
       console.error("Load error:", err);
       setMessage("❌ Ошибка загрузки");
+    }
+  };
+
+  const handleAddClub = async (value: string) => {
+    try {
+      const res = await fetch("/api/combo-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "clubs", value }),
+      });
+
+      if (res.ok) {
+        await loadComboOptions();
+        return true;
+      } else if (res.status === 409) {
+        return false;
+      }
+      return false;
+    } catch (err) {
+      console.error("Error adding club:", err);
+      return false;
+    }
+  };
+
+  const handleAddDirection = async (value: string) => {
+    try {
+      const res = await fetch("/api/combo-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "directions", value }),
+      });
+
+      if (res.ok) {
+        await loadComboOptions();
+        return true;
+      } else if (res.status === 409) {
+        return false;
+      }
+      return false;
+    } catch (err) {
+      console.error("Error adding direction:", err);
+      return false;
+    }
+  };
+
+  const handleAddSection = async (value: string) => {
+    try {
+      const res = await fetch("/api/combo-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "sections",
+          value,
+          direction: formData.direction,
+          supervisor: formData.supervisor_name,
+        }),
+      });
+
+      if (res.ok) {
+        if (formData.direction) {
+          await loadSections(formData.direction);
+        }
+        return true;
+      } else if (res.status === 409) {
+        return false;
+      }
+      return false;
+    } catch (err) {
+      console.error("Error adding section:", err);
+      return false;
     }
   };
 
@@ -142,10 +253,21 @@ export default function Home() {
     }
   };
 
-    const downloadExcel = () => {
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    const success = await logout();
+    if (success) {
+      router.push("/login");
+    } else {
+      setLoggingOut(false);
+      setMessage("❌ Ошибка выхода");
+    }
+  };
+
+  const downloadExcel = () => {
     try {
       if (data.length === 0) {
-        alert("⚠️ Нет данных за выбранный период!");
+        setMessage("⚠️ Нет данных за выбранный период!");
         return;
       }
 
@@ -156,32 +278,17 @@ export default function Home() {
 
       sheet1Data.push([
         "№ п/п",
-        `ФИО работника\nСведения на ${today}`,
+        `ФИО работника (Сведения на ${today})`,
         "Подразделение",
         "Название кружка, секции, клубного формирования",
         "Нагрузка",
         "Норма наполняемости",
         "Количество кружков",
         "Направление работы",
-        "Количество занимающихся",
-        "",
-        "",
+        "Количество занимающихся 14-18 лет",
+        "Количество занимающихся 18-35 лет",
+        "Молодая семья",
         "Примечание",
-      ]);
-
-      sheet1Data.push([
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "14-18 лет",
-        "18-35 лет",
-        "молодая семья",
-        "",
       ]);
 
       let rowNum = 1;
@@ -192,26 +299,32 @@ export default function Home() {
       let totalFamilies = 0;
 
       data.forEach((row: Report) => {
+        const safeRate = Number(row.rate) || 0;
+        const safeNormPeople = Number(row.norm_capacity_people) || 0;
+        const safeAge14_17 = Number(row.actual_age_14_17) || 0;
+        const safeAge18_35 = Number(row.actual_age_18_35) || 0;
+        const safeFamilies = Number(row.actual_families) || 0;
+
         sheet1Data.push([
           rowNum++,
-          row.supervisor_name,
-          row.club_name,
-          row.section_name,
-          row.rate,
-          row.norm_capacity_people,
+          row.supervisor_name || "",
+          row.club_name || "",
+          row.section_name || "",
+          safeRate,
+          safeNormPeople,
           1,
-          row.direction,
-          row.actual_age_14_17,
-          row.actual_age_18_35,
-          row.actual_families,
-          row.notes,
+          row.direction || "",
+          safeAge14_17,
+          safeAge18_35,
+          safeFamilies,
+          row.notes || "",
         ]);
 
-        totalRate += row.rate;
+        totalRate += safeRate;
         totalSections += 1;
-        totalAge14_17 += row.actual_age_14_17;
-        totalAge18_35 += row.actual_age_18_35;
-        totalFamilies += row.actual_families;
+        totalAge14_17 += safeAge14_17;
+        totalAge18_35 += safeAge18_35;
+        totalFamilies += safeFamilies;
       });
 
       sheet1Data.push([
@@ -230,18 +343,6 @@ export default function Home() {
       ]);
 
       // === ЛИСТ 2: Итоги по клубам ===
-      interface ClubStats {
-        club_name: string;
-        total_sections: number;
-        total_rate: number;
-        total_norm_people: number;
-        total_people: number;
-        total_families: number;
-        total_norm_mso: number;
-        total_mso: number;
-        notes: string;
-      }
-
       const sheet2Data: (string | number)[][] = [];
 
       sheet2Data.push([
@@ -252,49 +353,113 @@ export default function Home() {
         "Норма занимающихся (общая)",
         "Количество занимающихся",
         "Количество семей",
-        "",
-        "",
         "Норма МСО",
         "МСО фактическое",
         "Примечание",
       ]);
 
       let clubNum = 1;
-      summary.forEach((club: ClubStats) => {
+      summary.forEach((club) => {
         sheet2Data.push([
           clubNum++,
-          club.club_name,
-          club.total_sections,
-          club.total_rate,
-          club.total_norm_people,
-          club.total_people,
-          club.total_families,
-          "",
-          "",
-          club.total_norm_mso,
-          club.total_mso,
-          club.notes,
+          club.club_name || "",
+          club.total_sections || 0,
+          Number(club.total_rate) || 0,
+          Number(club.total_norm_people) || 0,
+          Number(club.total_people) || 0,
+          Number(club.total_families) || 0,
+          Number(club.total_norm_mso) || 0,
+          Number(club.total_mso) || 0,
+          club.notes || "",
         ]);
       });
 
       const wb = utils.book_new();
       const ws1 = utils.aoa_to_sheet(sheet1Data);
+      
+      // Установка ширины колонок для лучшей читаемости
+      ws1['!cols'] = [
+        { wch: 8 },  // № п/п
+        { wch: 25 }, // ФИО
+        { wch: 15 }, // Подразделение
+        { wch: 30 }, // Название кружка
+        { wch: 10 }, // Нагрузка
+        { wch: 15 }, // Норма
+        { wch: 12 }, // Кол-во кружков
+        { wch: 15 }, // Направление
+        { wch: 15 }, // 14-18
+        { wch: 15 }, // 18-35
+        { wch: 15 }, // Семья
+        { wch: 20 }, // Примечание
+      ];
+
       utils.book_append_sheet(wb, ws1, "Данные");
+
       const ws2 = utils.aoa_to_sheet(sheet2Data);
+      ws2['!cols'] = [
+        { wch: 8 },  // № п/п
+        { wch: 20 }, // Название клуба
+        { wch: 12 }, // Кол-во кружков
+        { wch: 15 }, // Нагрузка
+        { wch: 15 }, // Норма
+        { wch: 15 }, // Кол-во людей
+        { wch: 12 }, // Семьи
+        { wch: 12 }, // Норма МСО
+        { wch: 12 }, // МСО факт
+        { wch: 20 }, // Примечание
+      ];
+
       utils.book_append_sheet(wb, ws2, "Итоги по клубам");
 
       const filename = `Report_${selectedPeriod}_${new Date().toISOString().split("T")[0]}.xlsx`;
       writeFile(wb, filename);
-      setMessage("✅ Excel скачан!");
+      setMessage("✅ Excel скачан успешно!");
     } catch (err) {
       console.error("Excel error:", err);
-      setMessage("❌ Ошибка Excel: " + (err as Error).message);
+      const errorMsg = err instanceof Error ? err.message : "Неизвестная ошибка";
+      setMessage("❌ Ошибка при создании Excel: " + errorMsg);
     }
   };
 
+  if (!isClient) {
+    return <div className="container"><h1 className="title">⏳ Загрузка...</h1></div>;
+  }
+
   return (
     <div className="container">
-      <h1 className="title">📊 Отчётность детских кружков</h1>
+      {/* User header */}
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "20px",
+        padding: "10px 0",
+        borderBottom: "1px solid #eee",
+      }}>
+        <h1 className="title" style={{ margin: 0 }}>📊 Отчётность детских кружков</h1>
+        {userEmail && (
+          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+            <span style={{ color: "#666", fontSize: "14px" }}>👤 {userEmail}</span>
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#e74c3c",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: loggingOut ? "not-allowed" : "pointer",
+                fontSize: "14px",
+                fontWeight: "500",
+                opacity: loggingOut ? 0.7 : 1,
+              }}
+            >
+              {loggingOut ? "⏳" : "🚪 Выход"}
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Выбор периода */}
       <div className="period-selector">
@@ -314,187 +479,183 @@ export default function Home() {
       <div className="card">
         <h2>Внести данные</h2>
         <form onSubmit={handleSubmit} className="form">
-          
-          <select
-            value={formData.club_name}
-            onChange={(e) => setFormData({ ...formData, club_name: e.target.value })}
-            className="input"
-            required
-          >
-            <option value="">Выберите клуб</option>
-            {CLUBS.map(club => (
-              <option key={club} value={club}>{club}</option>
-            ))}
-          </select>
-
-          <select
-            value={formData.direction}
-            onChange={(e) => setFormData({ ...formData, direction: e.target.value as Direction })}
-            className="input"
-            required
-          >
-            <option value="">Выберите направление</option>
-            {DIRECTIONS.map(dir => (
-              <option key={dir} value={dir}>{dir}</option>
-            ))}
-          </select>
-
-          <select
-            value={formData.section_name}
-            onChange={(e) => setFormData({ ...formData, section_name: e.target.value })}
-            className="input"
-            required
-            disabled={!formData.direction}
-          >
-            <option value="">Выберите секцию</option>
-            {availableSections.map(sec => (
-              <option key={sec.name} value={sec.name}>{sec.name}</option>
-            ))}
-          </select>
-
-          <input
-            type="text"
-            placeholder="ФИО руководителя"
-            value={formData.supervisor_name}
-            className="input"
-            required
-            readOnly
-            style={{ backgroundColor: '#f5f5f5' }}
-          />
-
-          <select
-            value={formData.period}
-            onChange={(e) => setFormData({ ...formData, period: e.target.value })}
-            className="input"
-            required
-          >
-            <option value="">Выберите период</option>
-            {PERIODS.map(period => (
-              <option key={period} value={period}>{period}</option>
-            ))}
-          </select>
-
-          <select
-            value={formData.rate}
-            onChange={(e) => setFormData({ ...formData, rate: e.target.value })}
-            className="input"
-            required
-          >
-            <option value="">Выберите ставку</option>
-            {RATES.map(rate => (
-              <option key={rate} value={rate}>{rate}</option>
-            ))}
-          </select>
-
-          <input
-            type="number"
-            placeholder="Норма наполняемости (чел.)"
-            value={formData.norm_capacity_people}
-            onChange={(e) => setFormData({ ...formData, norm_capacity_people: e.target.value })}
-            className="input"
-            min="0"
-            step="0.01"
-          />
-
-          <div className="form-row">
-            <label>Фактическое кол-во занимающихся (чел.)</label>
-            <div className="form-row-inner">
-              <input
-                type="number"
-                placeholder="14-17 лет"
-                value={formData.actual_age_14_17}
-                onChange={(e) => setFormData({ ...formData, actual_age_14_17: e.target.value })}
-                className="input"
-                min="0"
+          {loadingOptions ? (
+            <p>⏳ Загрузка опций...</p>
+          ) : (
+            <>
+              <ComboBox
+                options={clubs}
+                value={formData.club_name}
+                onChange={(value) => setFormData({ ...formData, club_name: value })}
+                onAddNew={handleAddClub}
+                placeholder="Выберите или добавьте клуб"
                 required
               />
-              <input
-                type="number"
-                placeholder="18-35 лет"
-                value={formData.actual_age_18_35}
-                onChange={(e) => setFormData({ ...formData, actual_age_18_35: e.target.value })}
-                className="input"
-                min="0"
+
+              <ComboBox
+                options={directions}
+                value={formData.direction}
+                onChange={(value) => setFormData({ ...formData, direction: value as Direction })}
+                onAddNew={handleAddDirection}
+                placeholder="Выберите или добавьте направление"
                 required
               />
-            </div>
-            <small className="hint">
-              Всего: {(Number(formData.actual_age_14_17) || 0) + (Number(formData.actual_age_18_35) || 0)} чел.
-            </small>
-          </div>
 
-          <input
-            type="number"
-            placeholder="Норма наполняемости (семьи)"
-            value={formData.norm_capacity_families}
-            onChange={(e) => setFormData({ ...formData, norm_capacity_families: e.target.value })}
-            className="input"
-            min="0"
-          />
+              <ComboBox
+                options={sections.map(s => s.name)}
+                value={formData.section_name}
+                onChange={(value) => setFormData({ ...formData, section_name: value })}
+                onAddNew={handleAddSection}
+                placeholder="Выберите или добавьте секцию"
+                disabled={!formData.direction}
+                required
+              />
 
-          <input
-            type="number"
-            placeholder="Факт (семьи)"
-            value={formData.actual_families}
-            onChange={(e) => setFormData({ ...formData, actual_families: e.target.value })}
-            className="input"
-            min="0"
-          />
+              <input
+                type="text"
+                placeholder="ФИО руководителя"
+                value={formData.supervisor_name}
+                className="input"
+                required
+                readOnly
+                style={{ backgroundColor: '#f5f5f5' }}
+              />
 
-          <input
-            type="number"
-            placeholder="Норма МСО"
-            value={formData.norm_mso}
-            onChange={(e) => setFormData({ ...formData, norm_mso: e.target.value })}
-            className="input"
-            min="0"
-          />
+              <select
+                value={formData.period}
+                onChange={(e) => setFormData({ ...formData, period: e.target.value })}
+                className="input"
+                required
+              >
+                <option value="">Выберите период</option>
+                {PERIODS.map(period => (
+                  <option key={period} value={period}>{period}</option>
+                ))}
+              </select>
 
-          <div className="form-row">
-            <label>МСО фактическое</label>
-            <div className="form-row-inner">
+              <select
+                value={formData.rate}
+                onChange={(e) => setFormData({ ...formData, rate: e.target.value })}
+                className="input"
+                required
+              >
+                <option value="">Выберите ставку</option>
+                {RATES.map(rate => (
+                  <option key={rate} value={rate}>{rate}</option>
+                ))}
+              </select>
+
               <input
                 type="number"
-                placeholder="14-17 лет"
-                value={formData.mso_age_14_17}
-                onChange={(e) => setFormData({ ...formData, mso_age_14_17: e.target.value })}
+                placeholder="Норма наполняемости (чел.)"
+                value={formData.norm_capacity_people}
+                onChange={(e) => setFormData({ ...formData, norm_capacity_people: e.target.value })}
+                className="input"
+                min="0"
+                step="0.01"
+              />
+
+              <div className="form-row">
+                <label>Фактическое кол-во занимающихся (чел.)</label>
+                <div className="form-row-inner">
+                  <input
+                    type="number"
+                    placeholder="14-17 лет"
+                    value={formData.actual_age_14_17}
+                    onChange={(e) => setFormData({ ...formData, actual_age_14_17: e.target.value })}
+                    className="input"
+                    min="0"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="18-35 лет"
+                    value={formData.actual_age_18_35}
+                    onChange={(e) => setFormData({ ...formData, actual_age_18_35: e.target.value })}
+                    className="input"
+                    min="0"
+                    required
+                  />
+                </div>
+                <small className="hint">
+                  Всего: {(Number(formData.actual_age_14_17) || 0) + (Number(formData.actual_age_18_35) || 0)} чел.
+                </small>
+              </div>
+
+              <input
+                type="number"
+                placeholder="Норма наполняемости (семьи)"
+                value={formData.norm_capacity_families}
+                onChange={(e) => setFormData({ ...formData, norm_capacity_families: e.target.value })}
                 className="input"
                 min="0"
               />
+
               <input
                 type="number"
-                placeholder="18-35 лет"
-                value={formData.mso_age_18_35}
-                onChange={(e) => setFormData({ ...formData, mso_age_18_35: e.target.value })}
+                placeholder="Факт (семьи)"
+                value={formData.actual_families}
+                onChange={(e) => setFormData({ ...formData, actual_families: e.target.value })}
                 className="input"
                 min="0"
               />
-            </div>
-            <small className="hint">
-              Всего МСО: {(Number(formData.mso_age_14_17) || 0) + (Number(formData.mso_age_18_35) || 0)}
-            </small>
-          </div>
 
-          <textarea
-            placeholder="Примечание"
-            value={formData.notes}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            className="input textarea"
-            rows={3}
-          />
+              <input
+                type="number"
+                placeholder="Норма МСО"
+                value={formData.norm_mso}
+                onChange={(e) => setFormData({ ...formData, norm_mso: e.target.value })}
+                className="input"
+                min="0"
+              />
 
-          <input
-            type="password"
-            placeholder="Пароль (club2024)"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            className="input"
-            required
-          />
+              <div className="form-row">
+                <label>МСО фактическое</label>
+                <div className="form-row-inner">
+                  <input
+                    type="number"
+                    placeholder="14-17 лет"
+                    value={formData.mso_age_14_17}
+                    onChange={(e) => setFormData({ ...formData, mso_age_14_17: e.target.value })}
+                    className="input"
+                    min="0"
+                  />
+                  <input
+                    type="number"
+                    placeholder="18-35 лет"
+                    value={formData.mso_age_18_35}
+                    onChange={(e) => setFormData({ ...formData, mso_age_18_35: e.target.value })}
+                    className="input"
+                    min="0"
+                  />
+                </div>
+                <small className="hint">
+                  Всего МСО: {(Number(formData.mso_age_14_17) || 0) + (Number(formData.mso_age_18_35) || 0)}
+                </small>
+              </div>
 
-          <button type="submit" disabled={loading} className={loading ? "btn-disabled" : "btn"}>
-            {loading ? "..." : "Отправить"}
-          </button>
+              <textarea
+                placeholder="Примечание"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="input textarea"
+                rows={3}
+              />
+
+              <input
+                type="password"
+                placeholder="Пароль (club2024)"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="input"
+                required
+              />
+
+              <button type="submit" disabled={loading} className={loading ? "btn-disabled" : "btn"}>
+                {loading ? "..." : "Отправить"}
+              </button>
+            </>
+          )}
         </form>
         {message && <p className="msg">{message}</p>}
       </div>

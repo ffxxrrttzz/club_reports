@@ -475,11 +475,11 @@ export default function Home() {
   };
 
   if (!isClient) {
-    return <div className="container"><h1 className="title">⏳ Загрузка...</h1></div>;
+    return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>⏳ Загрузка...</div>;
   }
 
   return (
-    <div className="container">
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", padding: "20px", paddingBottom: "40px" }}>
       {/* User header */}
       <div style={{
         display: "flex",
@@ -493,6 +493,21 @@ export default function Home() {
         {userEmail && (
           <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
             <span style={{ color: "#666", fontSize: "14px" }}>👤 {userEmail}</span>
+            <button
+              onClick={() => router.push("/table-editor")}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#667eea",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: "500",
+              }}
+            >
+              📋 Редактор таблицы
+            </button>
             <button
               onClick={handleLogout}
               disabled={loggingOut}

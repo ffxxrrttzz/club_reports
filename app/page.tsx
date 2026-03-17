@@ -767,40 +767,38 @@ export default function Home() {
       {/* Экспорт и сводка */}
       <div className="card">
         <h2>📈 Итоги за {selectedPeriod}</h2>
+        <button onClick={downloadExcel} className="excel-btn">
+          📥 Скачать Excel за {selectedPeriod}
+        </button>
         {summary.length > 0 ? (
-          <>
-            <button onClick={downloadExcel} className="excel-btn">
-              📥 Скачать Excel за {selectedPeriod}
-            </button>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Клуб</th>
-                  <th>Кружков</th>
-                  <th>Нагрузка</th>
-                  <th>Норма</th>
-                  <th>Люди</th>
-                  <th>Семьи</th>
-                  <th>МСО норма</th>
-                  <th>МСО факт</th>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Клуб</th>
+                <th>Кружков</th>
+                <th>Нагрузка</th>
+                <th>Норма</th>
+                <th>Люди</th>
+                <th>Семьи</th>
+                <th>МСО норма</th>
+                <th>МСО факт</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summary.map((club) => (
+                <tr key={club.club_name}>
+                  <td>{club.club_name}</td>
+                  <td>{club.total_sections}</td>
+                  <td>{club.total_rate}</td>
+                  <td>{club.total_norm_people}</td>
+                  <td>{club.total_people}</td>
+                  <td>{club.total_families}</td>
+                  <td>{club.total_norm_mso}</td>
+                  <td>{club.total_mso}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {summary.map((club) => (
-                  <tr key={club.club_name}>
-                    <td>{club.club_name}</td>
-                    <td>{club.total_sections}</td>
-                    <td>{club.total_rate}</td>
-                    <td>{club.total_norm_people}</td>
-                    <td>{club.total_people}</td>
-                    <td>{club.total_families}</td>
-                    <td>{club.total_norm_mso}</td>
-                    <td>{club.total_mso}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
+              ))}
+            </tbody>
+          </table>
         ) : (
           <p>Нет данных за выбранный период</p>
         )}

@@ -5,6 +5,12 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Типы для данных
+type ClubOption = string;
+type DirectionOption = "КДН" | "ДПИ" | "Спортивное" | "Социальное" | "Патриотическое";
+type SectionOption = { name: string; supervisor: string };
+type ComboOption = ClubOption | DirectionOption | SectionOption;
+
 export async function GET(req: NextRequest) {
   try {
     const type = req.nextUrl.searchParams.get("type") as
@@ -20,23 +26,25 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    let data: any[] = [];
+    let data: ComboOption[] = [];
 
     switch (type) {
-      case "clubs":
-        const { data: clubs } = await supabase
+      case "clubs": {
+        const { data: clubs, error } = await supabase
           .from("clubs")
           .select("name")
           .order("name");
-        data = clubs?.map((c) => c.name) || [];
+        
+        if (error) throw error;
+        data = clubs?.map((c: { name: string }) => c.name) || [];
         break;
+      }
 
       case "directions":
-        // Directions are fixed values based on database CHECK constraint
-        data = ["КДН", "ДПИ", "Спортивное", "Социальное", "Патриотическое"];
+        data = ["КДН", "ДПИ", "Спортивное", "Социальное", "Патриотическое"] as DirectionOption[];
         break;
 
-      case "sections":
+      case "sections": {
         const directionParam = req.nextUrl.searchParams.get("direction");
         if (!directionParam) {
           return NextResponse.json(
@@ -44,17 +52,19 @@ export async function GET(req: NextRequest) {
             { status: 400 }
           );
         }
-        const { data: sections } = await supabase
+        const { data: sections, error } = await supabase
           .from("sections")
           .select("name, supervisor_name")
           .eq("direction", directionParam)
           .order("name");
-        data =
-          sections?.map((s) => ({
-            name: s.name,
-            supervisor: s.supervisor_name,
-          })) || [];
+        
+        if (error) throw error;
+        data = sections?.map((s: { name: string; supervisor_name: string }) => ({
+          name: s.name,
+          supervisor: s.supervisor_name,
+        })) || [];
         break;
+      }
 
       default:
         return NextResponse.json(
@@ -85,15 +95,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let result;
+    let result: unknown;
 
     switch (type) {
-      case "clubs":
-        const { data: existingClub } = await supabase
+      case "clubs": {
+        const { data: existingClub, error: fetchError } = await supabase
           .from("clubs")
           .select("id")
           .eq("name", value)
           .single();
+
+        if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
 
         if (existingClub) {
           return NextResponse.json(
@@ -110,21 +122,21 @@ export async function POST(req: NextRequest) {
         if (clubError) throw clubError;
         result = newClub;
         break;
+      }
 
-      case "directions":
-        // Directions are fixed and cannot be added
-        const validDirections = ["КДН", "ДПИ", "Спортивное", "Социальное", "Патриотическое"];
-        if (!validDirections.includes(value)) {
+      case "directions": {
+        const validDirections: DirectionOption[] = ["КДН", "ДПИ", "Спортивное", "Социальное", "Патриотическое"];
+        if (!validDirections.includes(value as DirectionOption)) {
           return NextResponse.json(
             { error: "Invalid direction. Allowed values: " + validDirections.join(", ") },
             { status: 400 }
           );
         }
-        // Return success but don't actually insert (they're fixed values)
         result = [{ name: value }];
         break;
+      }
 
-      case "sections":
+      case "sections": {
         if (!direction) {
           return NextResponse.json(
             { error: "direction is required for sections" },
@@ -132,12 +144,14 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        const { data: existingSec } = await supabase
+        const { data: existingSec, error: fetchError } = await supabase
           .from("sections")
           .select("id")
           .eq("name", value)
           .eq("direction", direction)
           .single();
+
+        if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
 
         if (existingSec) {
           return NextResponse.json(
@@ -154,6 +168,7 @@ export async function POST(req: NextRequest) {
         if (secError) throw secError;
         result = newSec;
         break;
+      }
 
       default:
         return NextResponse.json(

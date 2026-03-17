@@ -14,7 +14,7 @@ export default function TableEditorPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [selectedPeriod, setSelectedPeriod] = useState<string>(PERIODS[PERIODS.length - 1]);
-  const [availablePeriods, setAvailablePeriods] = useState<string[]>(PERIODS);
+  const availablePeriods: string[] = PERIODS; // Просто константа, без useState
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [isClient, setIsClient] = useState(false);
@@ -160,7 +160,7 @@ export default function TableEditorPage() {
               onChange={(e) => setSelectedPeriod(e.target.value)}
               className="table-editor-select"
             >
-              {availablePeriods.map((period) => (
+              {availablePeriods.map((period: string) => (
                 <option key={period} value={period}>
                   {period}
                 </option>

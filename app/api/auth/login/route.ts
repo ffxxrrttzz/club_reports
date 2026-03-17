@@ -81,6 +81,8 @@ export async function POST(req: NextRequest) {
       path: "/",
     });
 
+    console.log("[Login API] Session cookie set for user:", user.email);
+
     return response;
   } catch (err) {
     console.error("Login error:", err);

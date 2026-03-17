@@ -494,6 +494,21 @@ export default function Home() {
           <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
             <span style={{ color: "#666", fontSize: "14px" }}>👤 {userEmail}</span>
             <button
+              onClick={() => router.push("/table-editor")}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#667eea",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: "500",
+              }}
+            >
+              📋 Редактор таблицы
+            </button>
+            <button
               onClick={handleLogout}
               disabled={loggingOut}
               style={{

@@ -5,27 +5,17 @@ const publicRoutes = ["/login", "/register"];
 export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
-  // Allow API routes for auth and combo-options without session
-  if (path.startsWith("/api/auth/") || path.startsWith("/api/combo-options")) {
+  // Allow API routes and public routes without auth check
+  if (
+    path.startsWith("/api/") ||
+    path.startsWith("/_next") ||
+    path === "/favicon.ico" ||
+    publicRoutes.some(route => path === route || path.startsWith(route + "/"))
+  ) {
     return NextResponse.next();
   }
 
-  // Check if route is public (pages)
-  if (publicRoutes.some(route => path === route || path.startsWith(route + "/"))) {
-    return NextResponse.next();
-  }
-
-  // Check for session cookie on protected routes
-  const session = request.cookies.get("session");
-  const allCookies = request.cookies.getAll();
-
-  console.log(`[Middleware] Path: ${path}, Session exists: ${!!session}, All cookies: ${JSON.stringify(allCookies)}`);
-
-  // If no session, redirect to login
-  if (!session) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
+  // For all other routes, allow access - client will handle auth redirection
   return NextResponse.next();
 }
 

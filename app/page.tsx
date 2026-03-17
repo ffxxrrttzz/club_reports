@@ -10,6 +10,15 @@ import { RATES, PERIODS } from "@/types/database";
 
 export default function Home() {
   const router = useRouter();
+
+  // Check authentication on client side
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      router.push("/login");
+    }
+  }, [router]);
+
   const [formData, setFormData] = useState<FormData>({
     club_name: "",
     direction: "",
@@ -48,17 +57,10 @@ export default function Home() {
 
   useEffect(() => {
     setIsClient(true);
-    // Extract email from session cookie
-    try {
-      const cookies = document.cookie.split(";");
-      const sessionCookie = cookies.find((c) => c.trim().startsWith("session="));
-      if (sessionCookie) {
-        const sessionData = sessionCookie.split("=")[1];
-        const decoded = JSON.parse(atob(decodeURIComponent(sessionData)));
-        setUserEmail(decoded.email || "");
-      }
-    } catch (err) {
-      console.error("Error reading session:", err);
+    // Get email from localStorage
+    const email = localStorage.getItem("user_email");
+    if (email) {
+      setUserEmail(email);
     }
   }, []);
 

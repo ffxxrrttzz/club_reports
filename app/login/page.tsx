@@ -27,9 +27,16 @@ export default function LoginPage() {
       const json = await res.json();
 
       if (res.ok) {
+        // Сохраняем токен в localStorage
+        if (json.token) {
+          localStorage.setItem("auth_token", json.token);
+          localStorage.setItem("user_email", json.user.email);
+        }
         setMessage("✅ Вход выполнен успешно!");
-        // Используем router.push вместо window.location.href
-        router.push("/");
+        // Перенаправляем на главную страницу
+        setTimeout(() => {
+          router.push("/");
+        }, 100);
       } else {
         setMessage("❌ " + json.error);
       }

@@ -165,27 +165,6 @@ export default function Home() {
     }
   };
 
-  const handleAddDirection = async (value: string) => {
-    try {
-      const res = await fetch("/api/combo-options", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "directions", value }),
-      });
-
-      if (res.ok) {
-        await loadComboOptions();
-        return true;
-      } else if (res.status === 409) {
-        return false;
-      }
-      return false;
-    } catch (err) {
-      console.error("Error adding direction:", err);
-      return false;
-    }
-  };
-
   const handleAddSection = async (value: string) => {
     try {
       const res = await fetch("/api/combo-options", {
@@ -498,8 +477,7 @@ export default function Home() {
                 options={directions}
                 value={formData.direction}
                 onChange={(value) => setFormData({ ...formData, direction: value as Direction })}
-                onAddNew={handleAddDirection}
-                placeholder="Выберите или добавьте направление"
+                placeholder="Выберите направление"
                 required
               />
 

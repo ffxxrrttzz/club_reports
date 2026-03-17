@@ -21,15 +21,22 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        credentials: "include",
       });
 
       const json = await res.json();
 
       if (res.ok) {
+        // Сохраняем токен в localStorage
+        if (json.token) {
+          localStorage.setItem("auth_token", json.token);
+          localStorage.setItem("user_email", json.user.email);
+        }
         setMessage("✅ Вход выполнен успешно!");
+        // Перенаправляем на главную страницу
         setTimeout(() => {
-          router.push("/?reload=" + Date.now());
-        }, 500);
+          router.push("/");
+        }, 100);
       } else {
         setMessage("❌ " + json.error);
       }
@@ -42,7 +49,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="auth-container">
+    <div className="auth-container" suppressHydrationWarning>
       <div className="auth-card">
         <h1>🔐 Вход</h1>
         <p className="auth-subtitle">Система отчетности детских кружков</p>
@@ -56,6 +63,7 @@ export default function LoginPage() {
             className="input"
             required
             autoComplete="off"
+            suppressHydrationWarning
           />
 
           <input
@@ -66,6 +74,7 @@ export default function LoginPage() {
             className="input"
             required
             autoComplete="off"
+            suppressHydrationWarning
           />
 
           <button type="submit" disabled={loading} className={loading ? "btn-disabled" : "btn"}>

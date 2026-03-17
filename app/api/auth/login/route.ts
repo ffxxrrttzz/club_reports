@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
       {
         success: true,
         message: "Login successful",
+        token: sessionData,
         user: {
           id: user.id,
           email: user.email,
@@ -72,14 +73,16 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
 
-    // Set session cookie
+    // Also set session cookie as fallback
     response.cookies.set("session", sessionData, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      httpOnly: false,
+      secure: false,
+      sameSite: "none",
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: "/",
     });
+
+    console.log("[Login API] Session token created for user:", user.email);
 
     return response;
   } catch (err) {

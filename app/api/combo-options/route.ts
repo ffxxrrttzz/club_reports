@@ -32,11 +32,8 @@ export async function GET(req: NextRequest) {
         break;
 
       case "directions":
-        const { data: directions } = await supabase
-          .from("directions")
-          .select("name")
-          .order("name");
-        data = directions?.map((d) => d.name) || [];
+        // Directions are fixed values based on database CHECK constraint
+        data = ["КДН", "ДПИ", "Спортивное", "Социальное", "Патриотическое"];
         break;
 
       case "sections":
@@ -115,26 +112,16 @@ export async function POST(req: NextRequest) {
         break;
 
       case "directions":
-        const { data: existingDir } = await supabase
-          .from("directions")
-          .select("id")
-          .eq("name", value)
-          .single();
-
-        if (existingDir) {
+        // Directions are fixed and cannot be added
+        const validDirections = ["КДН", "ДПИ", "Спортивное", "Социальное", "Патриотическое"];
+        if (!validDirections.includes(value)) {
           return NextResponse.json(
-            { error: "Direction already exists" },
-            { status: 409 }
+            { error: "Invalid direction. Allowed values: " + validDirections.join(", ") },
+            { status: 400 }
           );
         }
-
-        const { data: newDir, error: dirError } = await supabase
-          .from("directions")
-          .insert([{ name: value }])
-          .select();
-
-        if (dirError) throw dirError;
-        result = newDir;
+        // Return success but don't actually insert (they're fixed values)
+        result = [{ name: value }];
         break;
 
       case "sections":

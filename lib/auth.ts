@@ -8,16 +8,13 @@ export interface User {
 
 export async function getSession(): Promise<User | null> {
   try {
-    // Try to decode session from cookie on client side
-    const cookies = document.cookie.split(";");
-    const sessionCookie = cookies.find((c) => c.trim().startsWith("session="));
-
-    if (!sessionCookie) {
+    // Get token from localStorage
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
       return null;
     }
 
-    const sessionData = sessionCookie.split("=")[1];
-    const decoded = JSON.parse(atob(decodeURIComponent(sessionData)));
+    const decoded = JSON.parse(atob(token));
 
     return {
       id: decoded.userId,
@@ -34,17 +31,22 @@ export async function getSession(): Promise<User | null> {
 
 export async function logout(): Promise<boolean> {
   try {
-    const res = await fetch("/api/auth/logout", {
-      method: "POST",
-    });
+    // Remove token from localStorage
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_email");
 
-    if (res.ok) {
-      // Redirect to login
-      window.location.href = "/login";
-      return true;
+    // Also try to call logout API
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+    } catch (err) {
+      console.error("Logout API error:", err);
     }
 
-    return false;
+    // Redirect to login
+    window.location.href = "/login";
+    return true;
   } catch (err) {
     console.error("Logout error:", err);
     return false;

@@ -46,13 +46,13 @@ export async function GET(req: NextRequest) {
         }
         const { data: sections } = await supabase
           .from("sections")
-          .select("name, supervisor")
+          .select("name, supervisor_name")
           .eq("direction", directionParam)
           .order("name");
         data =
           sections?.map((s) => ({
             name: s.name,
-            supervisor: s.supervisor,
+            supervisor: s.supervisor_name,
           })) || [];
         break;
 
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
 
         const { data: newSec, error: secError } = await supabase
           .from("sections")
-          .insert([{ name: value, direction, supervisor: supervisor || "" }])
+          .insert([{ name: value, direction, supervisor_name: supervisor || "" }])
           .select();
 
         if (secError) throw secError;

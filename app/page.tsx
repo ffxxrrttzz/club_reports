@@ -210,7 +210,7 @@ export default function Home() {
       const res = await fetch("/api/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, period: selectedPeriod }),
       });
 
       const json = await res.json();
@@ -485,25 +485,34 @@ export default function Home() {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: "20px",
-        padding: "10px 0",
-        borderBottom: "1px solid #eee",
+        marginBottom: "30px",
+        paddingBottom: "20px",
+        borderBottom: "3px solid rgba(255, 255, 255, 0.3)",
       }}>
-        <h1 className="title" style={{ margin: 0 }}>📊 Отчётность детских кружков</h1>
+        <h1 className="title" style={{ margin: 0, fontSize: "32px", fontWeight: 700, color: "white" }}>📊 Отчётность детских кружков</h1>
         {userEmail && (
           <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-            <span style={{ color: "#666", fontSize: "14px" }}>👤 {userEmail}</span>
+            <span style={{ color: "rgba(255, 255, 255, 0.9)", fontSize: "14px", fontWeight: "500" }}>👤 {userEmail}</span>
             <button
               onClick={() => router.push("/table-editor")}
               style={{
-                padding: "8px 16px",
-                backgroundColor: "#667eea",
+                padding: "10px 20px",
+                backgroundColor: "rgba(255, 255, 255, 0.2)",
                 color: "white",
-                border: "none",
-                borderRadius: "4px",
+                border: "2px solid rgba(255, 255, 255, 0.4)",
+                borderRadius: "6px",
                 cursor: "pointer",
                 fontSize: "14px",
-                fontWeight: "500",
+                fontWeight: "600",
+                transition: "all 0.3s",
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.3)";
+                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.6)";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
+                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.4)";
               }}
             >
               📋 Редактор таблицы
@@ -512,15 +521,26 @@ export default function Home() {
               onClick={handleLogout}
               disabled={loggingOut}
               style={{
-                padding: "8px 16px",
-                backgroundColor: "#e74c3c",
+                padding: "10px 20px",
+                backgroundColor: "rgba(255, 255, 255, 0.2)",
                 color: "white",
-                border: "none",
-                borderRadius: "4px",
+                border: "2px solid rgba(255, 255, 255, 0.4)",
+                borderRadius: "6px",
                 cursor: loggingOut ? "not-allowed" : "pointer",
                 fontSize: "14px",
-                fontWeight: "500",
-                opacity: loggingOut ? 0.7 : 1,
+                fontWeight: "600",
+                opacity: loggingOut ? 0.6 : 1,
+                transition: "all 0.3s",
+              }}
+              onMouseOver={(e) => {
+                if (!loggingOut) {
+                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.3)";
+                  e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.6)";
+                }
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
+                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.4)";
               }}
             >
               {loggingOut ? "⏳" : "🚪 Выход"}
@@ -530,14 +550,44 @@ export default function Home() {
       </div>
 
       {/* Выбор периода */}
-      <div className="period-selector">
-        <label>Выберите период для отчёта:</label>
-        <div style={{ display: 'flex', gap: '8px' }}>
+      <div style={{
+        background: "white",
+        padding: "20px",
+        borderRadius: "12px",
+        marginBottom: "25px",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+      }}>
+        <label style={{
+          fontWeight: "700",
+          color: "#1a1a1a",
+          fontSize: "15px",
+          marginBottom: "12px",
+          display: "block",
+        }}>📅 Выберите период для отчёта:</label>
+        <div style={{ display: 'flex', gap: '12px' }}>
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="input"
-            style={{ flex: 1 }}
+            style={{
+              flex: 1,
+              padding: "10px 12px",
+              border: "2px solid #e0e0e0",
+              borderRadius: "6px",
+              fontSize: "14px",
+              outline: "none",
+              transition: "all 0.3s",
+              backgroundColor: "white",
+              color: "#1a1a1a",
+              fontWeight: "500",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "#667eea";
+              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(102, 126, 234, 0.1)";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "#e0e0e0";
+              e.currentTarget.style.boxShadow = "none";
+            }}
           >
             {availablePeriods.map(period => (
               <option key={period} value={period}>{period}</option>
@@ -548,9 +598,25 @@ export default function Home() {
             placeholder="YYYY-MM"
             value={periodInputValue}
             onChange={(e) => setPeriodInputValue(e.target.value)}
-            className="input"
-            style={{ width: '120px' }}
+            style={{
+              width: '140px',
+              padding: "10px 12px",
+              border: "2px solid #e0e0e0",
+              borderRadius: "6px",
+              fontSize: "14px",
+              outline: "none",
+              transition: "all 0.3s",
+              color: "#1a1a1a",
+            }}
             pattern="\d{4}-\d{2}"
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "#667eea";
+              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(102, 126, 234, 0.1)";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "#e0e0e0";
+              e.currentTarget.style.boxShadow = "none";
+            }}
           />
           <button
             type="button"
@@ -562,8 +628,25 @@ export default function Home() {
                 setPeriodInputValue("");
               }
             }}
-            className="btn"
-            style={{ padding: '8px 16px', minWidth: '80px' }}
+            style={{
+              padding: "10px 20px",
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontWeight: "700",
+              transition: "all 0.3s",
+              minWidth: "80px",
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.3)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "none";
+            }}
           >
             +
           </button>
@@ -571,9 +654,26 @@ export default function Home() {
       </div>
 
       {/* Форма */}
-      <div className="card">
-        <h2>Внести данные</h2>
-        <form onSubmit={handleSubmit} className="form">
+      <div style={{
+        background: "white",
+        borderRadius: "12px",
+        boxShadow: "0 20px 60px rgba(0, 0, 0, 0.15)",
+        marginBottom: "25px",
+        padding: "40px",
+      }}>
+        <h2 style={{
+          margin: "0 0 25px 0",
+          fontSize: "24px",
+          fontWeight: "700",
+          color: "#1a1a1a",
+          borderBottom: "3px solid #f0f0f0",
+          paddingBottom: "15px",
+        }}>📝 Внести данные</h2>
+        <form onSubmit={handleSubmit} style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
+        }}>
           {loadingOptions ? (
             <p>⏳ Загрузка опций...</p>
           ) : (
@@ -610,56 +710,26 @@ export default function Home() {
                 placeholder="ФИО руководителя"
                 value={formData.supervisor_name}
                 onChange={(e) => setFormData({ ...formData, supervisor_name: e.target.value })}
-                className="input"
+                style={{
+                  padding: "10px 12px",
+                  border: "2px solid #e0e0e0",
+                  borderRadius: "6px",
+                  fontSize: "14px",
+                  outline: "none",
+                  transition: "all 0.3s",
+                  backgroundColor: "white",
+                  color: "#1a1a1a",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "#667eea";
+                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(102, 126, 234, 0.1)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "#e0e0e0";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
                 required
               />
-
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <select
-                  value={formData.period}
-                  onChange={(e) => {
-                    setFormData({ ...formData, period: e.target.value });
-                    setPeriodInputValue("");
-                  }}
-                  className="input"
-                  style={{ flex: 1 }}
-                  required
-                >
-                  <option value="">Выберите период</option>
-                  {availablePeriods.map(period => (
-                    <option key={period} value={period}>{period}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ fontSize: '12px', color: '#666', marginTop: '-8px' }}>
-                Или введите новый период (YYYY-MM):
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input
-                  type="text"
-                  placeholder="Например: 2025-01"
-                  value={periodInputValue}
-                  onChange={(e) => setPeriodInputValue(e.target.value)}
-                  className="input"
-                  style={{ flex: 1 }}
-                  pattern="\d{4}-\d{2}"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const regex = /^\d{4}-\d{2}$/;
-                    if (regex.test(periodInputValue) && !availablePeriods.includes(periodInputValue)) {
-                      setAvailablePeriods([...availablePeriods, periodInputValue].sort());
-                      setFormData({ ...formData, period: periodInputValue });
-                      setPeriodInputValue("");
-                    }
-                  }}
-                  className="btn"
-                  style={{ padding: '8px 16px', minWidth: '100px' }}
-                >
-                  Добавить
-                </button>
-              </div>
 
               <select
                 value={formData.rate}
@@ -776,7 +846,11 @@ export default function Home() {
             </>
           )}
         </form>
-        {message && <p className="msg">{message}</p>}
+        {message && (
+          <p className={`msg ${message.startsWith("✅") ? "success" : "error"}`}>
+            {message}
+          </p>
+        )}
       </div>
 
       {/* Экспорт и сводка */}

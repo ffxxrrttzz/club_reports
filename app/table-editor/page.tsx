@@ -18,6 +18,7 @@ export default function TableEditorPage() {
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [isClient, setIsClient] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
@@ -46,6 +47,36 @@ export default function TableEditorPage() {
       setMessage("❌ Ошибка загрузки");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      setMessage("");
+      const res = await fetch(`/api/export?period=${selectedPeriod}`);
+
+      if (!res.ok) {
+        const json = await res.json();
+        setMessage("❌ " + (json.error || "Ошибка экспорта"));
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `report_${selectedPeriod}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      setMessage("✅ Excel файл успешно скачан");
+    } catch (err) {
+      console.error("Export error:", err);
+      setMessage("❌ Ошибка скачивания файла");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -136,6 +167,13 @@ export default function TableEditorPage() {
               ))}
             </select>
           </div>
+          <button
+            onClick={handleExport}
+            disabled={sortedData.length === 0 || exporting}
+            className="table-editor-export-btn"
+          >
+            {exporting ? "⏳ Экспорт..." : "📥 Скачать Excel"}
+          </button>
         </div>
 
         {message && (
@@ -272,38 +310,39 @@ export default function TableEditorPage() {
         .table-editor-container {
           min-height: 100vh;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          padding: 20px;
+          padding: 30px 20px;
           display: flex;
           align-items: flex-start;
           justify-content: center;
-          padding-top: 20px;
         }
 
         .table-editor-card {
           background: white;
-          border-radius: 8px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+          border-radius: 12px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
           width: 100%;
           max-width: 1400px;
-          padding: 30px;
+          padding: 40px;
         }
 
         .table-editor-header {
-          margin-bottom: 25px;
-          border-bottom: 2px solid #f0f0f0;
-          padding-bottom: 15px;
+          margin-bottom: 30px;
+          border-bottom: 3px solid #f0f0f0;
+          padding-bottom: 20px;
         }
 
         .table-editor-header h1 {
-          margin: 0 0 8px 0;
-          font-size: 28px;
-          color: #333;
+          margin: 0 0 10px 0;
+          font-size: 32px;
+          color: #1a1a1a;
+          font-weight: 700;
         }
 
         .table-editor-subtitle {
           margin: 0;
-          color: #666;
-          font-size: 14px;
+          color: #777;
+          font-size: 15px;
+          font-weight: 500;
         }
 
         .table-editor-controls {
@@ -311,6 +350,7 @@ export default function TableEditorPage() {
           display: flex;
           gap: 15px;
           align-items: flex-end;
+          flex-wrap: wrap;
         }
 
         .period-control {
@@ -327,122 +367,167 @@ export default function TableEditorPage() {
 
         .table-editor-select {
           padding: 10px 12px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
+          border: 2px solid #e0e0e0;
+          border-radius: 6px;
           font-size: 14px;
           outline: none;
-          transition: border-color 0.3s;
+          transition: all 0.3s;
           min-width: 150px;
+          background-color: white;
+        }
+
+        .table-editor-select:hover {
+          border-color: #bbb;
         }
 
         .table-editor-select:focus {
           border-color: #667eea;
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .table-editor-export-btn {
+          padding: 10px 20px;
+          background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+        }
+
+        .table-editor-export-btn:hover:not(:disabled) {
+          background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%);
+          box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+          transform: translateY(-1px);
+        }
+
+        .table-editor-export-btn:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        .table-editor-export-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         .table-editor-msg {
-          padding: 12px;
-          border-radius: 4px;
+          padding: 14px 16px;
+          border-radius: 6px;
           text-align: center;
           font-size: 14px;
-          margin-bottom: 15px;
+          margin-bottom: 20px;
+          font-weight: 500;
         }
 
         .table-editor-msg.success {
-          background-color: #d4edda;
+          background: linear-gradient(135deg, #d4edda 0%, #c8e6c9 100%);
           color: #155724;
-          border: 1px solid #c3e6cb;
+          border: 2px solid #c3e6cb;
+          box-shadow: 0 2px 8px rgba(21, 87, 36, 0.1);
         }
 
         .table-editor-msg.error {
-          background-color: #f8d7da;
+          background: linear-gradient(135deg, #f8d7da 0%, #ffcdd2 100%);
           color: #721c24;
-          border: 1px solid #f5c6cb;
+          border: 2px solid #f5c6cb;
+          box-shadow: 0 2px 8px rgba(114, 28, 36, 0.1);
         }
 
         .table-editor-loading,
         .table-editor-empty {
           text-align: center;
-          color: #666;
-          padding: 20px;
-          font-size: 14px;
+          color: #777;
+          padding: 40px 20px;
+          font-size: 16px;
+          font-weight: 500;
         }
 
         .table-editor-scroll {
           overflow-x: auto;
-          margin-bottom: 20px;
-          border-radius: 4px;
-          border: 1px solid #ddd;
+          margin-bottom: 25px;
+          border-radius: 8px;
+          border: 1px solid #e8e8e8;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
         }
 
         .table-editor-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 13px;
+          font-size: 14px;
         }
 
         .table-editor-table thead {
-          background: #f8f9fa;
+          background: linear-gradient(180deg, #f8f9fa 0%, #f0f1f3 100%);
           position: sticky;
           top: 0;
           z-index: 10;
         }
 
         .table-editor-table th {
-          padding: 12px 10px;
+          padding: 16px 12px;
           text-align: left;
-          border-bottom: 2px solid #ddd;
-          border-right: 1px solid #ddd;
-          font-weight: 600;
-          color: #333;
-        }
-
-        .table-editor-table th:last-child {
-          border-right: none;
+          border-bottom: 2px solid #e0e0e0;
+          font-weight: 700;
+          color: #1a1a1a;
+          background: linear-gradient(180deg, #f8f9fa 0%, #f0f1f3 100%);
         }
 
         .table-editor-table td {
-          padding: 10px;
-          border-bottom: 1px solid #eee;
-          border-right: 1px solid #eee;
-          color: #555;
+          padding: 12px;
+          border-bottom: 1px solid #f0f0f0;
+          color: #444;
         }
 
-        .table-editor-table td:last-child {
-          border-right: none;
+        .table-editor-table tbody tr {
+          transition: background-color 0.2s;
         }
 
         .table-editor-table tbody tr:hover {
-          background-color: #f9f9f9;
+          background-color: #f8f9fa;
+        }
+
+        .table-editor-table tbody tr:nth-child(even) {
+          background-color: #fafbfc;
+        }
+
+        .table-editor-table tbody tr:hover:nth-child(even) {
+          background-color: #f5f6f7;
         }
 
         .number-cell {
           text-align: right;
-          font-weight: 500;
+          font-weight: 600;
           color: #667eea;
         }
 
         .notes-cell {
-          max-width: 200px;
+          max-width: 250px;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          color: #999;
-          font-size: 12px;
+          color: #888;
+          font-size: 13px;
         }
 
         .sort-button {
           background: none;
           border: none;
-          color: #333;
+          color: #1a1a1a;
           cursor: pointer;
           padding: 0;
-          font-size: 13px;
-          font-weight: 600;
+          font-size: 14px;
+          font-weight: 700;
           display: flex;
           align-items: center;
           gap: 6px;
           white-space: nowrap;
-          transition: color 0.2s;
+          transition: all 0.2s;
         }
 
         .sort-button:hover {
@@ -450,19 +535,25 @@ export default function TableEditorPage() {
         }
 
         .sort-button:active {
-          transform: scale(0.95);
+          transform: scale(0.98);
         }
 
         .table-editor-footer {
           text-align: right;
-          color: #666;
-          font-size: 13px;
-          padding-top: 15px;
-          border-top: 1px solid #eee;
+          color: #777;
+          font-size: 14px;
+          padding-top: 20px;
+          border-top: 2px solid #f0f0f0;
+          font-weight: 500;
         }
 
         .table-editor-footer p {
           margin: 0;
+        }
+
+        .table-editor-footer strong {
+          color: #667eea;
+          font-weight: 700;
         }
 
         @media (max-width: 768px) {

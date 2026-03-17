@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import type { Report } from "@/types/database";
-import { utils } from "xlsx";
+import { utils, write } from "xlsx";
 
 export async function GET(request: NextRequest) {
   try {
@@ -167,9 +167,13 @@ export async function GET(request: NextRequest) {
       "Примечание",
     ]);
 
-    // Данные
+    // Данные (сортируем по названию клуба)
+    const sortedClubs = Array.from(clubMap.entries()).sort((a, b) =>
+      a[0].localeCompare(b[0], "ru")
+    );
+
     let clubNum = 1;
-    clubMap.forEach((club, clubName) => {
+    sortedClubs.forEach(([clubName, club]) => {
       sheet2Data.push([
         clubNum++,
         clubName,
@@ -195,14 +199,16 @@ export async function GET(request: NextRequest) {
     const ws2 = utils.aoa_to_sheet(sheet2Data);
     utils.book_append_sheet(wb, ws2, "Итоги по клубам");
 
-    // Генерируем буфер для отправки (опционально)
-    // В текущей реализации экспорт происходит на клиенте через page.tsx
+    // Генерируем буфер и отправляем как файл
+    const excelBuffer = write(wb, { bookType: "xlsx", type: "array" });
 
-    return NextResponse.json({
-      success: true,
-      period,
-      rowCount: data.length,
-      message: "Excel готов к скачиванию",
+    return new NextResponse(Buffer.from(excelBuffer), {
+      status: 200,
+      headers: {
+        "Content-Disposition": `attachment; filename="report_${period}_${new Date().toISOString().split('T')[0]}.xlsx"`,
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Length": excelBuffer.length.toString(),
+      },
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Неизвестная ошибка";

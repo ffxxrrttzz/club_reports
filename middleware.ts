@@ -17,8 +17,9 @@ export function middleware(request: NextRequest) {
 
   // Check for session cookie on protected routes
   const session = request.cookies.get("session");
+  const allCookies = request.cookies.getAll();
 
-  console.log(`[Middleware] Path: ${path}, Session exists: ${!!session}`);
+  console.log(`[Middleware] Path: ${path}, Session exists: ${!!session}, All cookies: ${JSON.stringify(allCookies)}`);
 
   // If no session, redirect to login
   if (!session) {

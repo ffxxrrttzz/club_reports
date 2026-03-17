@@ -28,9 +28,8 @@ export default function LoginPage() {
 
       if (res.ok) {
         setMessage("✅ Вход выполнен успешно!");
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 500);
+        // Используем router.push вместо window.location.href
+        router.push("/");
       } else {
         setMessage("❌ " + json.error);
       }

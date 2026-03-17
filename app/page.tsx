@@ -269,19 +269,36 @@ export default function Home() {
       // === ЛИСТ 1: Данные ===
       const sheet1Data: (string | number)[][] = [];
 
+      // Первая строка заголовков (основные категории)
       sheet1Data.push([
         "№ п/п",
-        `ФИО работника (Сведения на ${today})`,
+        `ФИО работника\n(Сведения на ${today})`,
         "Подразделение",
         "Название кружка, секции, клубного формирования",
         "Нагрузка",
         "Норма наполняемости",
         "Количество кружков",
         "Направление работы",
-        "Количество занимающихся 14-18 лет",
-        "Количество занимающихся 18-35 лет",
-        "Молодая семья",
+        "Количество занимающихся",
+        "",
+        "",
         "Примечание",
+      ]);
+
+      // Вторая строка заголовков (подзаголовки)
+      sheet1Data.push([
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "14-18 лет",
+        "18-35 лет",
+        "молодая семья",
+        "",
       ]);
 
       let rowNum = 1;
@@ -369,7 +386,7 @@ export default function Home() {
 
       const wb = utils.book_new();
       const ws1 = utils.aoa_to_sheet(sheet1Data);
-      
+
       // Установка ширины колонок для лучшей читаемости
       ws1['!cols'] = [
         { wch: 8 },  // № п/п
@@ -384,6 +401,42 @@ export default function Home() {
         { wch: 15 }, // 18-35
         { wch: 15 }, // Семья
         { wch: 20 }, // Примечание
+      ];
+
+      // Установка высоты строк для заголовков
+      ws1['!rows'] = [
+        { hpx: 40 },  // Высота первой строки заголовков
+        { hpx: 30 },  // Высота второй строки заголовков
+      ];
+
+      // Применяем стиль к заголовкам (первые 2 строки)
+      const headerStyle = {
+        font: { bold: true },
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+      };
+
+      // Стилизуем первую и вторую строку (заголовки)
+      for (let col = 0; col < sheet1Data[0].length; col++) {
+        const cell1 = utils.encode_cell({ r: 0, c: col });
+        const cell2 = utils.encode_cell({ r: 1, c: col });
+        if (!ws1[cell1]) ws1[cell1] = { v: '', t: 's' };
+        if (!ws1[cell2]) ws1[cell2] = { v: '', t: 's' };
+        ws1[cell1].s = headerStyle;
+        ws1[cell2].s = headerStyle;
+      }
+
+      // Добавляем объединение ячеек для заголовков
+      ws1['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },  // № п/п
+        { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },  // ФИО
+        { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } },  // Подразделение
+        { s: { r: 0, c: 3 }, e: { r: 1, c: 3 } },  // Название кружка
+        { s: { r: 0, c: 4 }, e: { r: 1, c: 4 } },  // Нагрузка
+        { s: { r: 0, c: 5 }, e: { r: 1, c: 5 } },  // Норма наполняемости
+        { s: { r: 0, c: 6 }, e: { r: 1, c: 6 } },  // Кол-во кружков
+        { s: { r: 0, c: 7 }, e: { r: 1, c: 7 } },  // Направление работы
+        { s: { r: 0, c: 8 }, e: { r: 0, c: 10 } }, // Количество занимающихся (объединяет 3 подколонки)
+        { s: { r: 0, c: 11 }, e: { r: 1, c: 11 } } // Примечание
       ];
 
       utils.book_append_sheet(wb, ws1, "Данные");
@@ -401,6 +454,13 @@ export default function Home() {
         { wch: 12 }, // МСО факт
         { wch: 20 }, // Примечание
       ];
+
+      // Применяем стиль к заголовку второго листа
+      for (let col = 0; col < sheet2Data[0].length; col++) {
+        const cell = utils.encode_cell({ r: 0, c: col });
+        if (!ws2[cell]) ws2[cell] = { v: '', t: 's' };
+        ws2[cell].s = headerStyle;
+      }
 
       utils.book_append_sheet(wb, ws2, "Итоги по клубам");
 
@@ -707,40 +767,38 @@ export default function Home() {
       {/* Экспорт и сводка */}
       <div className="card">
         <h2>📈 Итоги за {selectedPeriod}</h2>
+        <button onClick={downloadExcel} className="excel-btn">
+          📥 Скачать Excel за {selectedPeriod}
+        </button>
         {summary.length > 0 ? (
-          <>
-            <button onClick={downloadExcel} className="excel-btn">
-              📥 Скачать Excel за {selectedPeriod}
-            </button>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Клуб</th>
-                  <th>Кружков</th>
-                  <th>Нагрузка</th>
-                  <th>Норма</th>
-                  <th>Люди</th>
-                  <th>Семьи</th>
-                  <th>МСО норма</th>
-                  <th>МСО факт</th>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Клуб</th>
+                <th>Кружков</th>
+                <th>Нагрузка</th>
+                <th>Норма</th>
+                <th>Люди</th>
+                <th>Семьи</th>
+                <th>МСО норма</th>
+                <th>МСО факт</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summary.map((club) => (
+                <tr key={club.club_name}>
+                  <td>{club.club_name}</td>
+                  <td>{club.total_sections}</td>
+                  <td>{club.total_rate}</td>
+                  <td>{club.total_norm_people}</td>
+                  <td>{club.total_people}</td>
+                  <td>{club.total_families}</td>
+                  <td>{club.total_norm_mso}</td>
+                  <td>{club.total_mso}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {summary.map((club) => (
-                  <tr key={club.club_name}>
-                    <td>{club.club_name}</td>
-                    <td>{club.total_sections}</td>
-                    <td>{club.total_rate}</td>
-                    <td>{club.total_norm_people}</td>
-                    <td>{club.total_people}</td>
-                    <td>{club.total_families}</td>
-                    <td>{club.total_norm_mso}</td>
-                    <td>{club.total_mso}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
+              ))}
+            </tbody>
+          </table>
         ) : (
           <p>Нет данных за выбранный период</p>
         )}

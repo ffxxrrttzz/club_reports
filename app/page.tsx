@@ -210,7 +210,7 @@ export default function Home() {
       const res = await fetch("/api/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, period: selectedPeriod }),
       });
 
       const json = await res.json();
@@ -730,53 +730,6 @@ export default function Home() {
                 }}
                 required
               />
-
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <select
-                  value={formData.period}
-                  onChange={(e) => {
-                    setFormData({ ...formData, period: e.target.value });
-                    setPeriodInputValue("");
-                  }}
-                  className="input"
-                  style={{ flex: 1 }}
-                  required
-                >
-                  <option value="">Выберите период</option>
-                  {availablePeriods.map(period => (
-                    <option key={period} value={period}>{period}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ fontSize: '13px', color: '#777', marginTop: '-8px', fontWeight: '500' }}>
-                Или введите новый период (YYYY-MM):
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input
-                  type="text"
-                  placeholder="Например: 2025-01"
-                  value={periodInputValue}
-                  onChange={(e) => setPeriodInputValue(e.target.value)}
-                  className="input"
-                  style={{ flex: 1 }}
-                  pattern="\d{4}-\d{2}"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const regex = /^\d{4}-\d{2}$/;
-                    if (regex.test(periodInputValue) && !availablePeriods.includes(periodInputValue)) {
-                      setAvailablePeriods([...availablePeriods, periodInputValue].sort());
-                      setFormData({ ...formData, period: periodInputValue });
-                      setPeriodInputValue("");
-                    }
-                  }}
-                  className="btn"
-                  style={{ padding: '8px 16px', minWidth: '100px' }}
-                >
-                  Добавить
-                </button>
-              </div>
 
               <select
                 value={formData.rate}

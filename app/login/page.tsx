@@ -28,7 +28,7 @@ export default function LoginPage() {
       if (res.ok) {
         setMessage("✅ Вход выполнен успешно!");
         setTimeout(() => {
-          router.push("/?reload=" + Date.now());
+          window.location.href = "/";
         }, 500);
       } else {
         setMessage("❌ " + json.error);

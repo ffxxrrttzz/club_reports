@@ -104,6 +104,7 @@ export default function Home() {
   const [clubs, setClubs] = useState<string[]>([]);
   const [directions, setDirections] = useState<string[]>([]);
   const [sections, setSections] = useState<{ name: string; supervisor: string }[]>([]);
+  const [supervisors, setSupervisors] = useState<string[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
 
   // User session
@@ -134,6 +135,7 @@ export default function Home() {
   useEffect(() => {
     if (formData.direction) {
       loadSections(formData.direction);
+      loadSupervisors(formData.direction);
       setFormData(prev => ({ ...prev, section_name: "", supervisor_name: "" }));
     }
   }, [formData.direction]);
@@ -204,6 +206,18 @@ export default function Home() {
     }
   };
 
+  const loadSupervisors = async (direction: string) => {
+    try {
+      const res = await fetch(`/api/combo-options?type=supervisors&direction=${encodeURIComponent(direction)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSupervisors(data.options || []);
+      }
+    } catch (err) {
+      console.error("Error loading supervisors:", err);
+    }
+  };
+
   const loadData = async (period: string) => {
     try {
       const res = await fetch(`/api/report?period=${period}`);
@@ -269,10 +283,37 @@ export default function Home() {
     }
   };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage("");
+  const handleAddSupervisor = async (value: string) => {
+    try {
+      const res = await fetch("/api/combo-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "supervisors",
+          value,
+          direction: formData.direction,
+        }),
+      });
+
+      if (res.ok) {
+        if (formData.direction) {
+          await loadSupervisors(formData.direction);
+        }
+        return true;
+      } else if (res.status === 409) {
+        return false;
+      }
+      return false;
+    } catch (err) {
+      console.error("Error adding supervisor:", err);
+      return false;
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setMessage("");
 
     try {
       const res = await fetch("/api/submit", {
@@ -828,29 +869,12 @@ export default function Home() {
                 required
               />
 
-              <input
-                type="text"
-                placeholder="ФИО руководителя"
+              <ComboBox
+                options={supervisors}
                 value={formData.supervisor_name}
-                onChange={(e) => setFormData({ ...formData, supervisor_name: e.target.value })}
-                style={{
-                  padding: "10px 12px",
-                  border: "2px solid #e0e0e0",
-                  borderRadius: "6px",
-                  fontSize: "14px",
-                  outline: "none",
-                  transition: "all 0.3s",
-                  backgroundColor: "white",
-                  color: "#1a1a1a",
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "#667eea";
-                  e.currentTarget.style.boxShadow = "0 0 0 3px rgba(102, 126, 234, 0.1)";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "#e0e0e0";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
+                onChange={(value) => setFormData({ ...formData, supervisor_name: value })}
+                onAddNew={handleAddSupervisor}
+                placeholder="Выберите или добавьте работника"
                 required
               />
 

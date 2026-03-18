@@ -5,132 +5,104 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Типы для данных
-type ClubOption = string;
 type DirectionOption = "КДН" | "ДПИ" | "Спортивное" | "Социальное" | "Патриотическое";
-type SectionOption = { name: string; supervisor: string };
-type ComboOption = ClubOption | DirectionOption | SectionOption;
 
+// GET: Получение опций для ComboBox
 export async function GET(req: NextRequest) {
   try {
-    const type = req.nextUrl.searchParams.get("type") as
-      | "clubs"
-      | "directions"
-      | "sections"
-      | null;
+    const type = req.nextUrl.searchParams.get("type") as "clubs" | "directions" | "sections" | "supervisors" | null;
 
     if (!type) {
-      return NextResponse.json(
-        { error: "type parameter is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "type parameter is required" }, { status: 400 });
     }
 
-    let data: ComboOption[] = [];
+    let data: (string | { name: string; supervisor: string })[] = [];
 
     switch (type) {
       case "clubs": {
-        const { data: clubs, error } = await supabase
-          .from("clubs")
-          .select("name")
-          .order("name");
-        
-        if (error) throw error;
-        data = clubs?.map((c: { name: string }) => c.name) || [];
+        const result = await supabase.from("clubs").select("name").order("name");
+        if (result.error) throw result.error;
+        data = result.data?.map((c: { name: string }) => c.name) || [];
         break;
       }
 
       case "directions":
-        data = ["КДН", "ДПИ", "Спортивное", "Социальное", "Патриотическое"] as DirectionOption[];
+        data = ["КДН", "ДПИ", "Спортивное", "Социальное", "Патриотическое"];
         break;
 
       case "sections": {
         const directionParam = req.nextUrl.searchParams.get("direction");
         if (!directionParam) {
-          return NextResponse.json(
-            { error: "direction parameter is required for sections" },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: "direction parameter is required" }, { status: 400 });
         }
-        const { data: sections, error } = await supabase
+        const result = await supabase
           .from("sections")
           .select("name, supervisor_name")
           .eq("direction", directionParam)
           .order("name");
-        
-        if (error) throw error;
-        data = sections?.map((s: { name: string; supervisor_name: string }) => ({
+        if (result.error) throw result.error;
+        data = result.data?.map((s: { name: string; supervisor_name: string }) => ({
           name: s.name,
           supervisor: s.supervisor_name,
         })) || [];
         break;
       }
 
+      case "supervisors": {
+        const directionParam = req.nextUrl.searchParams.get("direction");
+        if (!directionParam) {
+          return NextResponse.json({ error: "direction parameter is required" }, { status: 400 });
+        }
+        const result = await supabase
+          .from("sections")
+          .select("supervisor_name")
+          .eq("direction", directionParam);
+        if (result.error) throw result.error;
+        const uniqueSupervisors = [...new Set(result.data?.map((s: { supervisor_name: string }) => s.supervisor_name) || [])].filter(Boolean);
+        data = uniqueSupervisors;
+        break;
+      }
+
       default:
-        return NextResponse.json(
-          { error: "Invalid type parameter" },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Invalid type parameter" }, { status: 400 });
     }
 
     return NextResponse.json({ options: data });
   } catch (err) {
     console.error("Combo options error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch options" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch options" }, { status: 500 });
   }
 }
 
+// POST: Добавление новой опции
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { type, value, direction, supervisor } = body;
 
     if (!type || !value) {
-      return NextResponse.json(
-        { error: "type and value are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "type and value are required" }, { status: 400 });
     }
 
     let result: unknown;
 
     switch (type) {
       case "clubs": {
-        const { data: existingClub, error: fetchError } = await supabase
-          .from("clubs")
-          .select("id")
-          .eq("name", value)
-          .single();
-
-        if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
-
-        if (existingClub) {
-          return NextResponse.json(
-            { error: "Club already exists" },
-            { status: 409 }
-          );
+        const fetchResult = await supabase.from("clubs").select("id").eq("name", value).single();
+        if (fetchResult.error && fetchResult.error.code !== "PGRST116") throw fetchResult.error;
+        if (fetchResult.data) {
+          return NextResponse.json({ error: "Club already exists" }, { status: 409 });
         }
-
-        const { data: newClub, error: clubError } = await supabase
-          .from("clubs")
-          .insert([{ name: value }])
-          .select();
-
-        if (clubError) throw clubError;
-        result = newClub;
+        const insertResult = await supabase.from("clubs").insert([{ name: value }]).select();
+        if (insertResult.error) throw insertResult.error;
+        result = insertResult.data;
         break;
       }
 
       case "directions": {
-        const validDirections: DirectionOption[] = ["КДН", "ДПИ", "Спортивное", "Социальное", "Патриотическое"];
-        if (!validDirections.includes(value as DirectionOption)) {
-          return NextResponse.json(
-            { error: "Invalid direction. Allowed values: " + validDirections.join(", ") },
-            { status: 400 }
-          );
+        const validDirections = ["КДН", "ДПИ", "Спортивное", "Социальное", "Патриотическое"];
+        if (!validDirections.includes(value)) {
+          return NextResponse.json({ error: "Invalid direction" }, { status: 400 });
         }
         result = [{ name: value }];
         break;
@@ -138,51 +110,58 @@ export async function POST(req: NextRequest) {
 
       case "sections": {
         if (!direction) {
-          return NextResponse.json(
-            { error: "direction is required for sections" },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: "direction is required" }, { status: 400 });
         }
-
-        const { data: existingSec, error: fetchError } = await supabase
+        const fetchResult = await supabase
           .from("sections")
           .select("id")
           .eq("name", value)
           .eq("direction", direction)
           .single();
-
-        if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
-
-        if (existingSec) {
-          return NextResponse.json(
-            { error: "Section already exists" },
-            { status: 409 }
-          );
+        if (fetchResult.error && fetchResult.error.code !== "PGRST116") throw fetchResult.error;
+        if (fetchResult.data) {
+          return NextResponse.json({ error: "Section already exists" }, { status: 409 });
         }
-
-        const { data: newSec, error: secError } = await supabase
+        const insertResult = await supabase
           .from("sections")
           .insert([{ name: value, direction, supervisor_name: supervisor || "" }])
           .select();
+        if (insertResult.error) throw insertResult.error;
+        result = insertResult.data;
+        break;
+      }
 
-        if (secError) throw secError;
-        result = newSec;
+      case "supervisors": {
+        if (!direction) {
+          return NextResponse.json({ error: "direction is required" }, { status: 400 });
+        }
+        const fetchResult = await supabase
+          .from("sections")
+          .select("id")
+          .eq("supervisor_name", value)
+          .eq("direction", direction)
+          .single();
+        if (fetchResult.error && fetchResult.error.code !== "PGRST116") throw fetchResult.error;
+        if (fetchResult.data) {
+          return NextResponse.json({ error: "Сотрудник уже существует" }, { status: 409 });
+        }
+        const insertResult = await supabase
+          .from("sections")
+          .insert([{ name: `${value}`, direction, supervisor_name: value }])
+          .select();
+        if (insertResult.error) throw insertResult.error;
+        result = insertResult.data;
         break;
       }
 
       default:
-        return NextResponse.json(
-          { error: "Invalid type parameter" },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Invalid type parameter" }, { status: 400 });
     }
 
     return NextResponse.json({ success: true, data: result }, { status: 201 });
   } catch (err) {
     console.error("Combo create error:", err);
-    return NextResponse.json(
-      { error: "Failed to create option" },
-      { status: 500 }
-    );
+    const message = err instanceof Error ? err.message : "Неизвестная ошибка";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

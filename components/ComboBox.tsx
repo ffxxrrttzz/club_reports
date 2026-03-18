@@ -151,8 +151,8 @@ export default function ComboBox({
         <div className={styles.dropdown}>
           {filteredOptions.length > 0 ? (
             <ul className={styles.list}>
-              {filteredOptions.map((option) => (
-                <li key={option}>
+              {filteredOptions.map((option, index) => (
+                <li key={`${option}-${index}`}>
                   <button
                     type="button"
                     onClick={() => handleSelectOption(option)}

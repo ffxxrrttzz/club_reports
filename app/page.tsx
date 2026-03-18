@@ -8,6 +8,53 @@ import { logout } from "@/lib/auth";
 import type { Report, ClubSummary, FormData, Direction } from "@/types/database";
 import { RATES } from "@/types/database"; // Убрали PERIODS из импорта
 
+// Стили для горизонтальной прокрутки таблицы
+const tableWrapperStyles = `
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 15px 0;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+  }
+  
+  .table-wrapper::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  .table-wrapper::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 4px;
+  }
+  
+  .table-wrapper::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 4px;
+  }
+  
+  .table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #764ba2;
+  }
+  
+  @media (max-width: 768px) {
+    .table-wrapper {
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .table {
+      min-width: 600px;
+      font-size: 13px;
+    }
+    
+    .table th,
+    .table td {
+      padding: 8px 6px;
+      white-space: nowrap;
+    }
+  }
+`;
+
 function getDefaultPeriod(): string {
   const now = new Date();
   const year = now.getFullYear();
@@ -503,6 +550,57 @@ export default function Home() {
 
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", padding: "20px", paddingBottom: "40px" }}>
+      <style jsx global>{`
+      .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 15px 0;
+        border-radius: 6px;
+        border: 1px solid #e0e0e0;
+      }
+      
+      .table-wrapper::-webkit-scrollbar {
+        height: 8px;
+      }
+      
+      .table-wrapper::-webkit-scrollbar-track {
+        background: #f0f0f0;
+        border-radius: 4px;
+      }
+      
+      .table-wrapper::-webkit-scrollbar-thumb {
+        background: #667eea;
+        border-radius: 4px;
+      }
+      
+      .table-wrapper::-webkit-scrollbar-thumb:hover {
+        background: #764ba2;
+      }
+      
+      @media (max-width: 768px) {
+        .table-wrapper {
+          border-radius: 4px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .table {
+          min-width: 600px;
+          font-size: 13px;
+          margin-bottom: 0;
+        }
+        
+        .table th,
+        .table td {
+          padding: 8px 6px;
+          white-space: nowrap;
+        }
+        
+        .table th {
+          font-size: 12px;
+        }
+      }
+    `}</style>
+
       {/* User header */}
       <div style={{
         display: "flex",
@@ -511,6 +609,8 @@ export default function Home() {
         marginBottom: "30px",
         paddingBottom: "20px",
         borderBottom: "3px solid rgba(255, 255, 255, 0.3)",
+        flexWrap: "wrap",
+        gap: "30px"
       }}>
         <h1 className="title" style={{ margin: 0, fontSize: "32px", fontWeight: 700, color: "white" }}>📊 Отчётность детских кружков</h1>
         {userEmail && (
@@ -587,7 +687,7 @@ export default function Home() {
           marginBottom: "12px",
           display: "block",
         }}>📅 Выберите период для отчёта:</label>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: "wrap" }}>
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
@@ -883,34 +983,36 @@ export default function Home() {
           📥 Скачать Excel за {selectedPeriod}
         </button>
         {summary.length > 0 ? (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Клуб</th>
-                <th>Кружков</th>
-                <th>Нагрузка</th>
-                <th>Норма</th>
-                <th>Люди</th>
-                <th>Семьи</th>
-                <th>МСО норма</th>
-                <th>МСО факт</th>
-              </tr>
-            </thead>
-            <tbody>
-              {summary.map((club) => (
-                <tr key={club.club_name}>
-                  <td>{club.club_name}</td>
-                  <td>{club.total_sections}</td>
-                  <td>{club.total_rate}</td>
-                  <td>{club.total_norm_people}</td>
-                  <td>{club.total_people}</td>
-                  <td>{club.total_families}</td>
-                  <td>{club.total_norm_mso}</td>
-                  <td>{club.total_mso}</td>
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Клуб</th>
+                  <th>Кружков</th>
+                  <th>Нагрузка</th>
+                  <th>Норма</th>
+                  <th>Люди</th>
+                  <th>Семьи</th>
+                  <th>МСО норма</th>
+                  <th>МСО факт</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {summary.map((club) => (
+                  <tr key={club.club_name}>
+                    <td>{club.club_name}</td>
+                    <td>{club.total_sections}</td>
+                    <td>{club.total_rate}</td>
+                    <td>{club.total_norm_people}</td>
+                    <td>{club.total_people}</td>
+                    <td>{club.total_families}</td>
+                    <td>{club.total_norm_mso}</td>
+                    <td>{club.total_mso}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <p>Нет данных за выбранный период</p>
         )}

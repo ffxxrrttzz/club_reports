@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Report } from "@/types/database";
-import { PERIODS } from "@/types/database";
 
 type SortField = keyof Report | null;
 type SortOrder = "asc" | "desc";
@@ -13,8 +12,8 @@ export default function TableEditorPage() {
   const [data, setData] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const [selectedPeriod, setSelectedPeriod] = useState<string>(PERIODS[PERIODS.length - 1]);
-  const availablePeriods: string[] = PERIODS; // Просто константа, без useState
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("");
+  const [availablePeriods, setAvailablePeriods] = useState<string[]>([]); // ИЗМЕНЕНО
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [isClient, setIsClient] = useState(false);
@@ -26,11 +25,28 @@ export default function TableEditorPage() {
       router.push("/login");
     }
     setIsClient(true);
+    loadPeriods();
   }, [router]);
 
   useEffect(() => {
     loadData(selectedPeriod);
   }, [selectedPeriod]);
+
+  const loadPeriods = async () => {
+    try {
+      const res = await fetch("/api/periods");
+      const json = await res.json();
+      if (res.ok && json.periods && json.periods.length > 0) {
+        setAvailablePeriods(json.periods);
+        // Выбираем первый (последний) период по умолчанию
+        if (!selectedPeriod) {
+          setSelectedPeriod(json.periods[0]);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading periods:", err);
+    }
+  };
 
   const loadData = async (period: string) => {
     try {
@@ -148,7 +164,7 @@ export default function TableEditorPage() {
               ← Вернуться
             </button>
           </div>
-          <h1>📊 Редактор таблицы данных</h1>
+          <h1>📊 Просмотр таблицы данных</h1>
           <p className="table-editor-subtitle">Сортировка и просмотр всех записей</p>
         </div>
 

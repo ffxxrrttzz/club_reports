@@ -6,7 +6,7 @@ import { utils, writeFile } from "xlsx";
 import ComboBox from "@/components/ComboBox";
 import { logout } from "@/lib/auth";
 import type { Report, ClubSummary, FormData, Direction } from "@/types/database";
-import { RATES, PERIODS } from "@/types/database";
+import { RATES } from "@/types/database"; // Убрали PERIODS из импорта
 
 function getDefaultPeriod(): string {
   const now = new Date();
@@ -45,7 +45,7 @@ export default function Home() {
   });
 
   const [selectedPeriod, setSelectedPeriod] = useState<string>(getDefaultPeriod());
-  const [availablePeriods, setAvailablePeriods] = useState<string[]>(PERIODS);
+  const [availablePeriods, setAvailablePeriods] = useState<string[]>([]); // ИЗМЕНЕНО: было useState<string[]>(PERIODS)
   const [periodInputValue, setPeriodInputValue] = useState<string>("");
   const [data, setData] = useState<Report[]>([]);
   const [summary, setSummary] = useState<ClubSummary[]>([]);
@@ -70,6 +70,7 @@ export default function Home() {
     if (email) {
       setUserEmail(email);
     }
+    loadPeriods();
   }, []);
 
   // Load combo options on mount
@@ -99,6 +100,26 @@ export default function Home() {
       }
     }
   }, [formData.section_name, sections]);
+
+  const loadPeriods = async () => {
+    try {
+      const res = await fetch("/api/periods");
+      const json = await res.json();
+      if (res.ok && json.periods && json.periods.length > 0) {
+        setAvailablePeriods(json.periods);
+        // Если выбранный период не в списке, выбираем первый доступный
+        if (!json.periods.includes(selectedPeriod)) {
+          setSelectedPeriod(json.periods[0]);
+        }
+      } else {
+        // Если периодов нет в БД, используем текущий месяц
+        setAvailablePeriods([getDefaultPeriod()]);
+      }
+    } catch (err) {
+      console.error("Error loading periods:", err);
+      setAvailablePeriods([getDefaultPeriod()]);
+    }
+  };
 
   const loadComboOptions = async () => {
     try {
@@ -201,7 +222,7 @@ export default function Home() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage("");
@@ -217,6 +238,8 @@ export default function Home() {
 
       if (res.ok) {
         setMessage("✅ Отправлено!");
+        // Перезагружаем периоды (на случай если добавили новый)
+        await loadPeriods();
         setFormData(prev => ({
           ...prev,
           club_name: "",
@@ -515,7 +538,7 @@ export default function Home() {
                 e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.4)";
               }}
             >
-              📋 Редактор таблицы
+              📋 Просмотр таблицы
             </button>
             <button
               onClick={handleLogout}
